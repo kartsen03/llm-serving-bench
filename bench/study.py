@@ -205,8 +205,24 @@ def main() -> None:
               "prompt_sha256": prompts.file_sha256(prompt_path), "n_prompts": len(prompt_set),
               "servers": SERVERS}
     study = {"started_at": now_iso(), "env": env, "config": config, "blocks": []}
+    study_path = out / f"study_{dt.datetime.now():%Y%m%d-%H%M%S}.json"  # one per invocation
     position = 0
+
+    def run_path(name: str, c: int, rep: int) -> Path:
+        return out / "runs" / f"{name}_c{c:02d}_r{rep}.json"
+
+    def done(name: str, c: int, rep: int) -> bool:
+        """A run from this same commit is kept, so an interrupted study resumes where it was."""
+        p = run_path(name, c, rep)
+        if args.smoke or not p.exists():
+            return False
+        return json.loads(p.read_text(encoding="utf-8"))["env"]["git"]["commit"] == env["git"]["commit"]
+
     for block, (name, reps) in enumerate(schedule):
+        if all(done(name, c, rep) for rep in reps for c in levels):
+            position += len(reps) * len(levels)
+            print(f"[{now_iso()}] block {block} {name}: all runs already recorded, skipped", flush=True)
+            continue
         # The Windows plan has been seen to change on its own, so check it at every launch.
         plan = envinfo.windows_info()["power_plan"]
         if plan != "Turbo" and not (args.allow_power_plan or args.smoke):
@@ -236,6 +252,9 @@ def main() -> None:
                 random.Random(SEED * 100 + rep).shuffle(order)
                 for c in order:
                     position += 1
+                    if done(name, c, rep):
+                        print(f"  {name} r{rep} c={c:2d}: already recorded, skipped", flush=True)
+                        continue
                     n = 4 if args.smoke else n_requests(c)
                     plan = envinfo.windows_info()["power_plan"]
                     run = run_level(name, prompt_set, c, rep, n, max_tokens)
@@ -244,7 +263,7 @@ def main() -> None:
                               "block": block, "position": position, "n_requests": n,
                               "power_plan_at_start": plan,
                               "config": config, "env": env, "server_info": info, **run}
-                    path = out / "runs" / f"{name}_c{c:02d}_r{rep}.json"
+                    path = run_path(name, c, rep)
                     path.write_text(json.dumps(record, indent=1), encoding="utf-8")
                     print(f"  {name} r{rep} c={c:2d}: {s['output_tok_per_s']:7.1f} tok/s  "
                           f"{s['requests_per_s']:.2f} req/s  ttft p50 "
@@ -260,7 +279,7 @@ def main() -> None:
             info["gpu_after_stop_mib"] = wait_gpu_released(base["mem_used_mib_max"] or 0)
             study["blocks"].append(info)
             study["finished_at"] = now_iso()
-            (out / "study.json").write_text(json.dumps(study, indent=1), encoding="utf-8")
+            study_path.write_text(json.dumps(study, indent=1), encoding="utf-8")
 
 
 if __name__ == "__main__":

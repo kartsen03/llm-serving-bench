@@ -66,6 +66,6 @@ bash scripts/setup_vllm.sh          # venv at ~/llmbench/venv with vLLM
 bash scripts/setup_ollama.sh        # user-space Ollama at ~/llmbench/ollama
 bash scripts/setup_ollama_model.sh  # pulls the FP16 GGUF, creates the benchmark alias
 bash scripts/py.sh -m bench.prompts # regenerates data/prompts.jsonl (seeded)
-bash scripts/py.sh -m bench.study   # full study, about an hour
+bash scripts/run_study_detached.sh  # full study, about an hour; progress in results/logs/study_console.log
 bash scripts/py.sh -m bench.report  # table, plots and resume numbers from results/runs
 ```

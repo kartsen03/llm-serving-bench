@@ -32,6 +32,8 @@ METRICS = {  # name -> how to read it from one run file
     "sm_mhz_busy": lambda r: r["gpu"]["sm_clock_mhz_mean_busy"],
     "temp_c_max": lambda r: r["gpu"]["temp_c_max"],
     "errors": lambda r: r["summary"]["n_errors"],
+    "baseline_mib": lambda r: r["server_info"]["baseline_gpu"]["mem_used_mib_max"],
+    "idle_loaded_mib": lambda r: r["server_info"]["idle_loaded_gpu"]["mem_used_mib_max"],
 }
 
 
@@ -69,6 +71,7 @@ def provenance(runs: list[dict]) -> dict:
                 "windows": e["host"]["windows_ver"], "power_plan": e["host"]["power_plan"],
                 "cpu": e["host"]["cpu"], "wsl_mem_mib": e["host"]["wsl_mem_mib"],
                 "prompt_sha256": r["config"]["prompt_sha256"],
+                "power_plan_each_run": r.get("power_plan_at_start"),
                 f"{r['server']}_server_version": s.get("version")}
     merged, conflicts = {}, {}
     for r in runs:
@@ -99,16 +102,11 @@ def fidelity(runs: list[dict]) -> dict:
             "identical_first_60_chars_frac": sum(same_head) / len(pairs) if pairs else None}
 
 
-def fmt(x, nd=0):
-    return "n/a" if x is None else f"{x:,.{nd}f}"
+def fmt(x, nd=0, unit=""):
+    return "n/a" if x is None else f"{x:,.{nd}f}{unit}"
 
 
-def table(agg: dict) -> str:
-    cols = [("out_tok_s", "Output tok/s", 0), ("req_s", "Req/s", 2), ("ttft_p50_ms", "TTFT p50 (ms)", 0),
-            ("ttft_p90_ms", "TTFT p90 (ms)", 0), ("itl_p50_ms", "ITL p50 (ms)", 1),
-            ("gap_p99_ms", "Token gap p99 (ms)", 0), ("e2e_p50_s", "E2E p50 (s)", 2),
-            ("mean_out_tokens", "Mean out tokens", 0), ("peak_mem_mib", "Peak GPU mem (MiB)", 0),
-            ("sm_mhz_busy", "SM clock busy (MHz)", 0)]
+def _md_table(agg: dict, cols: list[tuple[str, str, int]], ranged: tuple[str, ...]) -> str:
     head = "| Server | Concurrency | " + " | ".join(c[1] for c in cols) + " |"
     sep = "|" + "---|" * (len(cols) + 2)
     rows = []
@@ -117,11 +115,42 @@ def table(agg: dict) -> str:
         for key, _, nd in cols:
             m = e[key]
             cell = fmt(m["median"], nd)
-            if key in ("out_tok_s", "ttft_p50_ms") and m["min"] is not None:
+            if key in ranged and m["min"] is not None:
                 cell += f" ({fmt(m['min'], nd)}–{fmt(m['max'], nd)})"
             cells.append(cell)
         rows.append(f"| {SERVER_LABEL[e['server']]} | {e['concurrency']} | " + " | ".join(cells) + " |")
     return "\n".join([head, sep, *rows])
+
+
+def table(agg: dict) -> str:
+    perf = [("out_tok_s", "Output tok/s", 0), ("req_s", "Req/s", 2),
+            ("ttft_p50_ms", "TTFT p50 (ms)", 0), ("ttft_p90_ms", "TTFT p90 (ms)", 0),
+            ("itl_p50_ms", "ITL p50 (ms)", 1), ("gap_p99_ms", "Token gap p99 (ms)", 0),
+            ("e2e_p50_s", "E2E p50 (s)", 2)]
+    hw = [("mean_out_tokens", "Mean output tokens", 0), ("length_frac", "Share hitting 256", 2),
+          ("peak_mem_mib", "Peak GPU mem (MiB)", 0), ("baseline_mib", "Idle baseline (MiB)", 0),
+          ("sm_mhz_busy", "SM clock busy (MHz)", 0), ("temp_c_max", "Max temp (C)", 0),
+          ("errors", "Errors", 0)]
+    return ("### Throughput and latency (median of 3 runs; ranges are min–max)\n\n"
+            + _md_table(agg, perf, ("out_tok_s", "ttft_p50_ms", "itl_p50_ms"))
+            + "\n\n### Output length, memory and clocks (median of 3 runs)\n\n"
+            + _md_table(agg, hw, ()) + "\n\n### vLLM relative to Ollama (ratio of medians)\n\n"
+            + comparison(agg))
+
+
+def comparison(agg: dict) -> str:
+    rows = ["| Concurrency | Throughput vLLM/Ollama | TTFT p50 vLLM/Ollama | ITL p50 vLLM/Ollama |",
+            "|---|---|---|---|"]
+    for c in sorted({e["concurrency"] for e in agg.values()}):
+        v, o = agg.get(f"vllm_c{c}"), agg.get(f"ollama_c{c}")
+        if not (v and o):
+            continue
+        def r(key):
+            a, b = v[key]["median"], o[key]["median"]
+            return f"{a / b:.2f}x" if a and b else "n/a"
+        rows.append(f"| {c} | {r('out_tok_s')} | {r('ttft_p50_ms')} | {r('itl_p50_ms')} |")
+    return ("\n".join(rows)
+            + "\n\nThroughput above 1 favours vLLM; TTFT and ITL below 1 favour vLLM.")
 
 
 def plot(agg: dict, out: Path) -> None:
@@ -176,6 +205,8 @@ def resume_block(agg: dict, prov: dict) -> str:
     v = prov["values"]
     peak = {s: max((e["peak_mem_mib"]["max"] for e in agg.values() if e["server"] == s
                     and e["peak_mem_mib"]["max"] is not None), default=None) for s in SERVER_LABEL}
+    base = min((e["baseline_mib"]["min"] for e in agg.values()
+                if e["baseline_mib"]["min"] is not None), default=None)
     ratio_hi = (m("vllm", hi, "out_tok_s") / m("ollama", hi, "out_tok_s")
                 if m("vllm", hi, "out_tok_s") and m("ollama", hi, "out_tok_s") else None)
     ratio_1 = (m("vllm", 1, "out_tok_s") / m("ollama", 1, "out_tok_s")
@@ -189,13 +220,14 @@ def resume_block(agg: dict, prov: dict) -> str:
     ]
     for s in ("vllm", "ollama"):
         lines.append(f"{SERVER_LABEL[s]:10}{fmt(m(s, 1, 'out_tok_s'), 1):>10}"
-                     f"{fmt(m(s, 1, 'ttft_p50_ms')) + ' ms':>11}{fmt(m(s, hi, 'out_tok_s'), 0):>11}"
-                     f"{fmt(m(s, hi, 'ttft_p50_ms')) + ' ms':>12}{fmt(peak[s]) + ' MiB':>14}")
+                     f"{fmt(m(s, 1, 'ttft_p50_ms'), 0, ' ms'):>11}{fmt(m(s, hi, 'out_tok_s'), 0):>11}"
+                     f"{fmt(m(s, hi, 'ttft_p50_ms'), 0, ' ms'):>12}{fmt(peak[s], 0, ' MiB'):>14}")
     lines += [
         "",
-        f"Throughput ratio vLLM/Ollama: {fmt(ratio_1, 2)}x at concurrency 1, {fmt(ratio_hi, 2)}x at {hi}",
-        "Peak GPU memory is device-wide memory.used from nvidia-smi (WSL2 has no per-process view);",
-        f"  vLLM pre-reserves --gpu-memory-utilization of VRAM, so its number is a reservation, not need.",
+        f"Throughput ratio vLLM/Ollama: {fmt(ratio_1, 2, 'x')} at concurrency 1, {fmt(ratio_hi, 2, 'x')} at {hi}",
+        f"Peak GPU memory is device-wide memory.used from nvidia-smi (WSL2 has no per-process view) and",
+        f"  includes the Windows desktop's {fmt(base, 0, ' MiB')} idle baseline. vLLM pre-reserves",
+        f"  --gpu-memory-utilization 0.80 of VRAM, so its number is a reservation, not what it needed.",
         "",
         f"GPU: {v.get('gpu')} ({v.get('vram_mib')}), driver {v.get('driver')}, CUDA {v.get('cuda_driver_api')} (driver API)",
         f"vLLM {v.get('vllm')} (torch {v.get('torch')}, CUDA runtime {v.get('torch_cuda_runtime')}); "
