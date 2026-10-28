@@ -1,0 +1,1268 @@
+{
+ "started_at": "2026-10-27T22:23:21-04:00",
+ "env": {
+  "git": {
+   "commit": "8156fd55562816c24d85892680e7b5404011c1e3",
+   "dirty": false,
+   "dirty_files": []
+  },
+  "gpu": {
+   "name": "NVIDIA GeForce RTX 3060 Laptop GPU",
+   "driver_version": "592.00",
+   "memory_total": "6144 MiB",
+   "vbios": "94.06.2b.00.55",
+   "max_sm_clock": "2100 MHz",
+   "max_mem_clock": "7001 MHz",
+   "cuda_driver_api_version": "13.1",
+   "nvidia_smi_version": "590.62"
+  },
+  "cuda_toolkit_nvcc": "Cuda compilation tools, release 13.1, V13.1.115",
+  "host": {
+   "cpu": "12th Gen Intel(R) Core(TM) i7-12700H",
+   "wsl_mem_mib": "7787",
+   "kernel": "6.6.114.1-microsoft-standard-WSL2",
+   "distro": "Ubuntu 24.04.4 LTS",
+   "windows_ver": "Microsoft Windows [Version 10.0.26300.9711]",
+   "power_plan": "Turbo"
+  },
+  "python": "3.12.3",
+  "packages": {
+   "vllm": "0.32.0",
+   "torch": "2.13.0",
+   "transformers": "5.19.0",
+   "aiohttp": "3.14.5",
+   "flashinfer-python": "0.7.0.post1",
+   "triton": "3.7.1"
+  },
+  "torch_cuda_runtime": "13.0"
+ },
+ "config": {
+  "levels": [
+   1,
+   2,
+   4,
+   8,
+   16
+  ],
+  "schedule": [
+   [
+    "vllm",
+    [
+     1
+    ]
+   ],
+   [
+    "ollama",
+    [
+     1,
+     2
+    ]
+   ],
+   [
+    "vllm",
+    [
+     2,
+     3
+    ]
+   ],
+   [
+    "ollama",
+    [
+     3
+    ]
+   ]
+  ],
+  "max_tokens": 256,
+  "seed": 20261027,
+  "requests_per_run": {
+   "1": 16,
+   "2": 16,
+   "4": 32,
+   "8": 64,
+   "16": 128
+  },
+  "warmup_seconds_per_launch": 30,
+  "per_level_warmup": "one wave of c requests",
+  "sampling": {
+   "temperature": 0.0,
+   "top_p": 1.0,
+   "frequency_penalty": 0.0,
+   "presence_penalty": 0.0
+  },
+  "prompt_file": "data/prompts.jsonl",
+  "prompt_sha256": "757f4a3b2913af7128761f4a0ead31ba84be1fc2ca0038f2b8825b2026f09974",
+  "n_prompts": 64,
+  "servers": {
+   "vllm": {
+    "script": "scripts/serve_vllm.sh",
+    "base_url": "http://127.0.0.1:8000",
+    "model": "qwen2.5-1.5b-instruct",
+    "ready": "/v1/models"
+   },
+   "ollama": {
+    "script": "scripts/serve_ollama.sh",
+    "base_url": "http://127.0.0.1:11435",
+    "model": "qwen2.5-1.5b-bench",
+    "ready": "/api/version"
+   }
+  }
+ },
+ "blocks": [
+  {
+   "block": 0,
+   "server": "vllm",
+   "repeats": [
+    1
+   ],
+   "baseline_gpu": {
+    "n_samples": 23,
+    "mem_used_mib_max": 359.0,
+    "mem_used_mib_min": 359.0,
+    "mem_total_mib": 6144.0,
+    "util_pct_mean": 0.6086956521739131,
+    "sm_clock_mhz_mean_busy": null,
+    "sm_clock_mhz_min_busy": null,
+    "temp_c_max": 52.0,
+    "power_w_mean": 13.01217391304348,
+    "clock_event_reasons_seen": [
+     "0x0000000000000001"
+    ]
+   },
+   "power_plan": "Turbo",
+   "launch_script": "#!/usr/bin/env bash\n# vLLM OpenAI-compatible server used by bench/study.py. Each result file stores this script.\n#   --dtype float16            the checkpoint is BF16; FP16 matches Ollama's F16 GGUF\n#   --max-model-len 2048       same per-request context as Ollama's OLLAMA_CONTEXT_LENGTH\n#   --max-num-seqs 16          at most 16 sequences in a batch, same as OLLAMA_NUM_PARALLEL\n#   --generation-config vllm   ignore the checkpoint's sampling defaults (repetition_penalty 1.1)\n#   --no-enable-prefix-caching  caching off on both servers (Ollama: LLAMA_ARG_CACHE_RAM=0); the\n#                               client's per-request tag would defeat it anyway\nset -euo pipefail\nexport HF_HUB_DISABLE_TELEMETRY=1 VLLM_NO_USAGE_STATS=1 DO_NOT_TRACK=1 HF_HUB_OFFLINE=1\nexec \"$HOME/llmbench/venv/bin/vllm\" serve Qwen/Qwen2.5-1.5B-Instruct \\\n  --revision 989aa7980e4cf806f80c7fef2b1adb7bc71aa306 \\\n  --served-model-name qwen2.5-1.5b-instruct \\\n  --dtype float16 \\\n  --max-model-len 2048 \\\n  --max-num-seqs 16 \\\n  --gpu-memory-utilization 0.80 \\\n  --generation-config vllm \\\n  --no-enable-prefix-caching \\\n  --seed 0 \\\n  --disable-uvicorn-access-log \\\n  --host 127.0.0.1 --port 8000\n",
+   "ready_s": 42.045034000999976,
+   "idle_loaded_gpu": {
+    "n_samples": 24,
+    "mem_used_mib_max": 5261.0,
+    "mem_used_mib_min": 5261.0,
+    "mem_total_mib": 6144.0,
+    "util_pct_mean": 0.0,
+    "sm_clock_mhz_mean_busy": null,
+    "sm_clock_mhz_min_busy": null,
+    "temp_c_max": 51.0,
+    "power_w_mean": 13.100000000000001,
+    "clock_event_reasons_seen": [
+     "0x0000000000000001"
+    ]
+   },
+   "details": {
+    "version": "0.32.0",
+    "models": {
+     "object": "list",
+     "data": [
+      {
+       "id": "qwen2.5-1.5b-instruct",
+       "object": "model",
+       "created": 1793154250,
+       "owned_by": "vllm",
+       "root": "Qwen/Qwen2.5-1.5B-Instruct",
+       "parent": null,
+       "max_model_len": 2048,
+       "permission": [
+        {
+         "id": "modelperm-81cbfae60d73fcf4",
+         "object": "model_permission",
+         "created": 1793154250,
+         "allow_create_engine": false,
+         "allow_sampling": true,
+         "allow_logprobs": true,
+         "allow_search_indices": false,
+         "allow_view": true,
+         "allow_fine_tuning": false,
+         "organization": "*",
+         "group": null,
+         "is_blocking": false
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "warmup": {
+    "seconds": 30.263464761000023,
+    "requests": 96
+   },
+   "details_after": {
+    "version": "0.32.0",
+    "models": {
+     "object": "list",
+     "data": [
+      {
+       "id": "qwen2.5-1.5b-instruct",
+       "object": "model",
+       "created": 1793154496,
+       "owned_by": "vllm",
+       "root": "Qwen/Qwen2.5-1.5B-Instruct",
+       "parent": null,
+       "max_model_len": 2048,
+       "permission": [
+        {
+         "id": "modelperm-a6ac87d9c3d763df",
+         "object": "model_permission",
+         "created": 1793154496,
+         "allow_create_engine": false,
+         "allow_sampling": true,
+         "allow_logprobs": true,
+         "allow_search_indices": false,
+         "allow_view": true,
+         "allow_fine_tuning": false,
+         "organization": "*",
+         "group": null,
+         "is_blocking": false
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "log_highlights": [
+    "(APIServer pid=693) INFO 10-27 22:23:38 [api_utils.py:286] non-default args: {'model_tag': 'Qwen/Qwen2.5-1.5B-Instruct', 'host': '127.0.0.1', 'disable_uvicorn_access_log': True, 'model': 'Qwen/Qwen2.5-1.5B-Instruct', 'dtype': 'float16', 'revision': '989aa7980e4cf806f80c7fef2b1adb7bc71aa306', 'max_model_len': 2048, 'served_model_name': ['qwen2.5-1.5b-instruct'], 'generation_config': 'vllm', 'gpu_me",
+    "(EngineCore pid=768) INFO 10-27 22:23:52 [cuda.py:506] Using FLASH_ATTN attention backend out of potential backends: ['FLASH_ATTN', 'FLASHINFER', 'TRITON_ATTN', 'FLEX_ATTENTION'].",
+    "(EngineCore pid=768) INFO 10-27 22:23:55 [default_loader.py:501] Loading weights took 1.83 seconds",
+    "(EngineCore pid=768) INFO 10-27 22:23:56 [model_runner.py:424] Model loading took 2.98 GiB memory and 5.986836 seconds",
+    "(EngineCore pid=768) INFO 10-27 22:23:56 [utils.py:347] Using LBNHC KV cache layout.",
+    "(EngineCore pid=768) INFO 10-27 22:23:58 [decorators.py:319] [backbone] Directly load AOT compilation from path /home/karthik/.cache/vllm/torch_compile_cache/torch_aot_compile/a4bb1a1a7f8bb0c0ef1188df90694292c9d8fd3c425bab0235c51e22708bfcd3/rank_0_0/model",
+    "(EngineCore pid=768) INFO 10-27 22:23:58 [monitor.py:62] [backbone] torch.compile took 0.30 s in total",
+    "(EngineCore pid=768) INFO 10-27 22:24:00 [model_runner.py:1127] Graph capturing finished in 1 secs, took 0.08 GiB",
+    "(EngineCore pid=768) INFO 10-27 22:24:01 [gpu_worker.py:759] Available KV cache memory: 1.5 GiB",
+    "(EngineCore pid=768) INFO 10-27 22:24:01 [gpu_worker.py:774] CUDA graph memory profiling is enabled (default since v0.21.0). The current --gpu-memory-utilization=0.8000 is equivalent to --gpu-memory-utilization=0.7847 without CUDA graph memory profiling. To maintain the same effective KV cache size as before, increase --gpu-memory-utilization to 0.8153. To disable, set VLLM_MEMORY_PROFILER_ESTIMAT",
+    "(EngineCore pid=768) INFO 10-27 22:24:01 [kv_cache_utils.py:2327] GPU KV cache size: 56,048 tokens, Maximum concurrency for 2,048 tokens per request: 27.37x",
+    "(EngineCore pid=768) INFO 10-27 22:24:02 [model_runner.py:1127] Graph capturing finished in 1 secs, took 0.05 GiB",
+    "(APIServer pid=693) INFO 10-27 22:24:16 [loggers.py:335] Engine 000: Avg prompt throughput: 1660.4 tokens/s, Avg generation throughput: 356.8 tokens/s, Running: 16 reqs, Waiting: 0 reqs, GPU KV cache usage: 19.1%",
+    "(APIServer pid=693) INFO 10-27 22:24:26 [loggers.py:335] Engine 000: Avg prompt throughput: 2307.7 tokens/s, Avg generation throughput: 819.3 tokens/s, Running: 16 reqs, Waiting: 0 reqs, GPU KV cache usage: 19.9%",
+    "(APIServer pid=693) INFO 10-27 22:24:36 [loggers.py:335] Engine 000: Avg prompt throughput: 2168.1 tokens/s, Avg generation throughput: 818.9 tokens/s, Running: 16 reqs, Waiting: 0 reqs, GPU KV cache usage: 19.1%",
+    "(APIServer pid=693) INFO 10-27 22:24:46 [loggers.py:335] Engine 000: Avg prompt throughput: 1506.8 tokens/s, Avg generation throughput: 683.2 tokens/s, Running: 8 reqs, Waiting: 0 reqs, GPU KV cache usage: 12.0%",
+    "(APIServer pid=693) INFO 10-27 22:24:56 [loggers.py:335] Engine 000: Avg prompt throughput: 1162.9 tokens/s, Avg generation throughput: 519.3 tokens/s, Running: 8 reqs, Waiting: 0 reqs, GPU KV cache usage: 14.6%",
+    "(APIServer pid=693) INFO 10-27 22:25:06 [loggers.py:335] Engine 000: Avg prompt throughput: 1599.1 tokens/s, Avg generation throughput: 479.1 tokens/s, Running: 8 reqs, Waiting: 0 reqs, GPU KV cache usage: 12.2%",
+    "(APIServer pid=693) INFO 10-27 22:25:16 [loggers.py:335] Engine 000: Avg prompt throughput: 1130.5 tokens/s, Avg generation throughput: 511.1 tokens/s, Running: 8 reqs, Waiting: 0 reqs, GPU KV cache usage: 11.6%",
+    "(APIServer pid=693) INFO 10-27 22:25:26 [loggers.py:335] Engine 000: Avg prompt throughput: 680.1 tokens/s, Avg generation throughput: 203.5 tokens/s, Running: 4 reqs, Waiting: 0 reqs, GPU KV cache usage: 6.9%",
+    "(APIServer pid=693) INFO 10-27 22:25:36 [loggers.py:335] Engine 000: Avg prompt throughput: 787.5 tokens/s, Avg generation throughput: 280.7 tokens/s, Running: 4 reqs, Waiting: 0 reqs, GPU KV cache usage: 4.8%",
+    "(APIServer pid=693) INFO 10-27 22:25:46 [loggers.py:335] Engine 000: Avg prompt throughput: 629.3 tokens/s, Avg generation throughput: 289.7 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 1.5%",
+    "(APIServer pid=693) INFO 10-27 22:25:56 [loggers.py:335] Engine 000: Avg prompt throughput: 485.2 tokens/s, Avg generation throughput: 204.8 tokens/s, Running: 0 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.0%",
+    "(APIServer pid=693) INFO 10-27 22:26:06 [loggers.py:335] Engine 000: Avg prompt throughput: 550.9 tokens/s, Avg generation throughput: 137.8 tokens/s, Running: 2 reqs, Waiting: 0 reqs, GPU KV cache usage: 3.0%",
+    "(APIServer pid=693) INFO 10-27 22:26:16 [loggers.py:335] Engine 000: Avg prompt throughput: 405.1 tokens/s, Avg generation throughput: 153.0 tokens/s, Running: 2 reqs, Waiting: 0 reqs, GPU KV cache usage: 3.3%",
+    "(APIServer pid=693) INFO 10-27 22:26:26 [loggers.py:335] Engine 000: Avg prompt throughput: 382.3 tokens/s, Avg generation throughput: 152.8 tokens/s, Running: 2 reqs, Waiting: 0 reqs, GPU KV cache usage: 2.3%",
+    "(APIServer pid=693) INFO 10-27 22:26:36 [loggers.py:335] Engine 000: Avg prompt throughput: 1129.0 tokens/s, Avg generation throughput: 426.7 tokens/s, Running: 0 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.0%",
+    "(APIServer pid=693) INFO 10-27 22:26:46 [loggers.py:335] Engine 000: Avg prompt throughput: 2241.6 tokens/s, Avg generation throughput: 784.8 tokens/s, Running: 16 reqs, Waiting: 0 reqs, GPU KV cache usage: 26.8%",
+    "(APIServer pid=693) INFO 10-27 22:26:56 [loggers.py:335] Engine 000: Avg prompt throughput: 2244.1 tokens/s, Avg generation throughput: 750.9 tokens/s, Running: 16 reqs, Waiting: 0 reqs, GPU KV cache usage: 25.9%",
+    "(APIServer pid=693) INFO 10-27 22:27:06 [loggers.py:335] Engine 000: Avg prompt throughput: 2241.7 tokens/s, Avg generation throughput: 738.8 tokens/s, Running: 16 reqs, Waiting: 0 reqs, GPU KV cache usage: 24.2%",
+    "(APIServer pid=693) INFO 10-27 22:27:16 [loggers.py:335] Engine 000: Avg prompt throughput: 2244.6 tokens/s, Avg generation throughput: 729.3 tokens/s, Running: 16 reqs, Waiting: 0 reqs, GPU KV cache usage: 22.8%",
+    "(APIServer pid=693) INFO 10-27 22:27:26 [loggers.py:335] Engine 000: Avg prompt throughput: 241.7 tokens/s, Avg generation throughput: 304.8 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 2.3%",
+    "(APIServer pid=693) INFO 10-27 22:27:36 [loggers.py:335] Engine 000: Avg prompt throughput: 219.1 tokens/s, Avg generation throughput: 86.8 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.8%",
+    "(APIServer pid=693) INFO 10-27 22:27:46 [loggers.py:335] Engine 000: Avg prompt throughput: 253.9 tokens/s, Avg generation throughput: 86.4 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 1.2%",
+    "(APIServer pid=693) INFO 10-27 22:27:56 [loggers.py:335] Engine 000: Avg prompt throughput: 264.7 tokens/s, Avg generation throughput: 86.4 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 2.2%",
+    "(APIServer pid=693) INFO 10-27 22:28:06 [loggers.py:335] Engine 000: Avg prompt throughput: 175.1 tokens/s, Avg generation throughput: 87.4 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 1.7%"
+   ],
+   "gpu_after_stop_mib": 359.0
+  },
+  {
+   "block": 1,
+   "server": "ollama",
+   "repeats": [
+    1,
+    2
+   ],
+   "baseline_gpu": {
+    "n_samples": 24,
+    "mem_used_mib_max": 359.0,
+    "mem_used_mib_min": 359.0,
+    "mem_total_mib": 6144.0,
+    "util_pct_mean": 0.0,
+    "sm_clock_mhz_mean_busy": null,
+    "sm_clock_mhz_min_busy": null,
+    "temp_c_max": 65.0,
+    "power_w_mean": 13.555833333333332,
+    "clock_event_reasons_seen": [
+     "0x0000000000000001"
+    ]
+   },
+   "power_plan": "Turbo",
+   "launch_script": "#!/usr/bin/env bash\n# Ollama server used by bench/study.py (user-space install from scripts/setup_ollama.sh).\n#   OLLAMA_NUM_PARALLEL=16      16 request slots, so it can batch up to the highest concurrency\n#   OLLAMA_CONTEXT_LENGTH=2048  per-request context, same as vLLM --max-model-len\n#   port 11435                  keeps clear of the Windows Ollama app on 11434\n#   LLAMA_ARG_CACHE_RAM=0       turns off llama-server's host-RAM prompt cache. Its default 8 GiB limit\n#                               is more than this WSL instance's 7.6 GB of RAM, and the workload gives it\n#                               nothing to reuse (see results/aborted/attempt2_1c2d0a3/NOTE.md)\n# Everything else (flash attention, KV cache type f16) stays at Ollama's defaults.\nset -euo pipefail\nexport OLLAMA_HOST=127.0.0.1:11435\nexport OLLAMA_MODELS=\"$HOME/llmbench/ollama-models\"\nexport OLLAMA_NUM_PARALLEL=16\nexport OLLAMA_CONTEXT_LENGTH=2048\nexport OLLAMA_KEEP_ALIVE=-1\nexport OLLAMA_MAX_LOADED_MODELS=1\nexport OLLAMA_NOHISTORY=1\nexport LLAMA_ARG_CACHE_RAM=0\nexec \"$HOME/llmbench/ollama/bin/ollama\" serve\n",
+   "ready_s": 6.009169281000027,
+   "model_load_s": 15.925794655999994,
+   "idle_loaded_gpu": {
+    "n_samples": 24,
+    "mem_used_mib_max": 4395.0,
+    "mem_used_mib_min": 4395.0,
+    "mem_total_mib": 6144.0,
+    "util_pct_mean": 0.2916666666666667,
+    "sm_clock_mhz_mean_busy": null,
+    "sm_clock_mhz_min_busy": null,
+    "temp_c_max": 61.0,
+    "power_w_mean": 22.06458333333333,
+    "clock_event_reasons_seen": [
+     "0x0000000000000001"
+    ]
+   },
+   "details": {
+    "version": "0.40.12",
+    "show": {
+     "details": {
+      "parent_model": "qwen2.5:1.5b-instruct-fp16",
+      "format": "gguf",
+      "family": "qwen2",
+      "families": [
+       "qwen2"
+      ],
+      "parameter_size": "1.5B",
+      "quantization_level": "F16",
+      "runner": "llamacpp"
+     },
+     "parameters": "num_ctx                        2048\nrepeat_penalty                 1\ntemperature                    0\ntop_p                          1",
+     "modified_at": "2026-10-27T21:53:06.126876596-04:00",
+     "capabilities": [
+      "completion",
+      "tools"
+     ],
+     "model_info": {
+      "general.architecture": "qwen2",
+      "general.base_model.0.name": "Qwen2.5 1.5B",
+      "general.base_model.0.organization": "Qwen",
+      "general.base_model.0.repo_url": "https://huggingface.co/Qwen/Qwen2.5-1.5B",
+      "general.base_model.count": 1,
+      "general.basename": "Qwen2.5",
+      "general.file_type": 1,
+      "general.finetune": "Instruct",
+      "general.license": "apache-2.0",
+      "general.license.link": "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct/blob/main/LICENSE",
+      "general.parameter_count": 1543714304,
+      "general.quantization_version": 2,
+      "general.size_label": "1.5B",
+      "general.type": "model",
+      "qwen2.attention.head_count": 12,
+      "qwen2.attention.head_count_kv": 2,
+      "qwen2.attention.layer_norm_rms_epsilon": 1e-06,
+      "qwen2.block_count": 28,
+      "qwen2.context_length": 32768,
+      "qwen2.embedding_length": 1536,
+      "qwen2.feed_forward_length": 8960,
+      "qwen2.rope.freq_base": 1000000,
+      "tokenizer.ggml.add_bos_token": false,
+      "tokenizer.ggml.bos_token_id": 151643,
+      "tokenizer.ggml.eos_token_id": 151645,
+      "tokenizer.ggml.model": "gpt2",
+      "tokenizer.ggml.padding_token_id": 151643,
+      "tokenizer.ggml.pre": "qwen2"
+     }
+    },
+    "ps": {
+     "models": [
+      {
+       "name": "qwen2.5-1.5b-bench:latest",
+       "model": "qwen2.5-1.5b-bench:latest",
+       "size": 4096985660,
+       "digest": "55c2f08d214157bffc1c1103e9d8c1d2acc9b582a5bd71aa6d5e8f613d763c9d",
+       "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "qwen2",
+        "families": [
+         "qwen2"
+        ],
+        "parameter_size": "1.5B",
+        "quantization_level": "F16"
+       },
+       "expires_at": "2319-02-06T21:16:01.94817016-05:00",
+       "size_vram": 4096985660,
+       "context_length": 2048,
+       "runner": "llamacpp"
+      }
+     ]
+    },
+    "tags": [
+     {
+      "name": "qwen2.5-1.5b-bench:latest",
+      "model": "qwen2.5-1.5b-bench:latest",
+      "modified_at": "2026-10-27T21:53:06.126876596-04:00",
+      "size": 3093682443,
+      "digest": "55c2f08d214157bffc1c1103e9d8c1d2acc9b582a5bd71aa6d5e8f613d763c9d",
+      "details": {
+       "parent_model": "qwen2.5:1.5b-instruct-fp16",
+       "format": "gguf",
+       "family": "qwen2",
+       "families": [
+        "qwen2"
+       ],
+       "parameter_size": "1.5B",
+       "quantization_level": "F16",
+       "context_length": 32768,
+       "embedding_length": 1536,
+       "runner": "llamacpp"
+      },
+      "capabilities": [
+       "completion",
+       "tools"
+      ]
+     },
+     {
+      "name": "qwen2.5:1.5b-instruct-fp16",
+      "model": "qwen2.5:1.5b-instruct-fp16",
+      "modified_at": "2026-10-27T21:53:05.835823742-04:00",
+      "size": 3093682753,
+      "digest": "d8035f049126b916d6dd500c31d123e369f9e32867b05001c09c1da56fef739f",
+      "details": {
+       "parent_model": "/Users/ollama/.ollama/models/blobs/sha256-2b9e80eacde5690a3a3cf6afcf44a3d53cdab6e0b777552fb64f055efc658956",
+       "format": "gguf",
+       "family": "qwen2",
+       "families": [
+        "qwen2"
+       ],
+       "parameter_size": "1.5B",
+       "quantization_level": "F16",
+       "context_length": 32768,
+       "embedding_length": 1536,
+       "runner": "ggml"
+      },
+      "capabilities": [
+       "completion",
+       "tools"
+      ]
+     }
+    ]
+   },
+   "warmup": {
+    "seconds": 36.65362441499997,
+    "requests": 64
+   },
+   "details_after": {
+    "version": "0.40.12",
+    "show": {
+     "details": {
+      "parent_model": "qwen2.5:1.5b-instruct-fp16",
+      "format": "gguf",
+      "family": "qwen2",
+      "families": [
+       "qwen2"
+      ],
+      "parameter_size": "1.5B",
+      "quantization_level": "F16",
+      "runner": "llamacpp"
+     },
+     "parameters": "num_ctx                        2048\nrepeat_penalty                 1\ntemperature                    0\ntop_p                          1",
+     "modified_at": "2026-10-27T21:53:06.126876596-04:00",
+     "capabilities": [
+      "completion",
+      "tools"
+     ],
+     "model_info": {
+      "general.architecture": "qwen2",
+      "general.base_model.0.name": "Qwen2.5 1.5B",
+      "general.base_model.0.organization": "Qwen",
+      "general.base_model.0.repo_url": "https://huggingface.co/Qwen/Qwen2.5-1.5B",
+      "general.base_model.count": 1,
+      "general.basename": "Qwen2.5",
+      "general.file_type": 1,
+      "general.finetune": "Instruct",
+      "general.license": "apache-2.0",
+      "general.license.link": "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct/blob/main/LICENSE",
+      "general.parameter_count": 1543714304,
+      "general.quantization_version": 2,
+      "general.size_label": "1.5B",
+      "general.type": "model",
+      "qwen2.attention.head_count": 12,
+      "qwen2.attention.head_count_kv": 2,
+      "qwen2.attention.layer_norm_rms_epsilon": 1e-06,
+      "qwen2.block_count": 28,
+      "qwen2.context_length": 32768,
+      "qwen2.embedding_length": 1536,
+      "qwen2.feed_forward_length": 8960,
+      "qwen2.rope.freq_base": 1000000,
+      "tokenizer.ggml.add_bos_token": false,
+      "tokenizer.ggml.bos_token_id": 151643,
+      "tokenizer.ggml.eos_token_id": 151645,
+      "tokenizer.ggml.model": "gpt2",
+      "tokenizer.ggml.padding_token_id": 151643,
+      "tokenizer.ggml.pre": "qwen2"
+     }
+    },
+    "ps": {
+     "models": [
+      {
+       "name": "qwen2.5-1.5b-bench:latest",
+       "model": "qwen2.5-1.5b-bench:latest",
+       "size": 4096985660,
+       "digest": "55c2f08d214157bffc1c1103e9d8c1d2acc9b582a5bd71aa6d5e8f613d763c9d",
+       "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "qwen2",
+        "families": [
+         "qwen2"
+        ],
+        "parameter_size": "1.5B",
+        "quantization_level": "F16"
+       },
+       "expires_at": "2319-02-06T21:26:39.513537411-05:00",
+       "size_vram": 4096985660,
+       "context_length": 2048,
+       "runner": "llamacpp"
+      }
+     ]
+    },
+    "tags": [
+     {
+      "name": "qwen2.5-1.5b-bench:latest",
+      "model": "qwen2.5-1.5b-bench:latest",
+      "modified_at": "2026-10-27T21:53:06.126876596-04:00",
+      "size": 3093682443,
+      "digest": "55c2f08d214157bffc1c1103e9d8c1d2acc9b582a5bd71aa6d5e8f613d763c9d",
+      "details": {
+       "parent_model": "qwen2.5:1.5b-instruct-fp16",
+       "format": "gguf",
+       "family": "qwen2",
+       "families": [
+        "qwen2"
+       ],
+       "parameter_size": "1.5B",
+       "quantization_level": "F16",
+       "context_length": 32768,
+       "embedding_length": 1536,
+       "runner": "llamacpp"
+      },
+      "capabilities": [
+       "completion",
+       "tools"
+      ]
+     },
+     {
+      "name": "qwen2.5:1.5b-instruct-fp16",
+      "model": "qwen2.5:1.5b-instruct-fp16",
+      "modified_at": "2026-10-27T21:53:05.835823742-04:00",
+      "size": 3093682753,
+      "digest": "d8035f049126b916d6dd500c31d123e369f9e32867b05001c09c1da56fef739f",
+      "details": {
+       "parent_model": "/Users/ollama/.ollama/models/blobs/sha256-2b9e80eacde5690a3a3cf6afcf44a3d53cdab6e0b777552fb64f055efc658956",
+       "format": "gguf",
+       "family": "qwen2",
+       "families": [
+        "qwen2"
+       ],
+       "parameter_size": "1.5B",
+       "quantization_level": "F16",
+       "context_length": 32768,
+       "embedding_length": 1536,
+       "runner": "ggml"
+      },
+      "capabilities": [
+       "completion",
+       "tools"
+      ]
+     }
+    ]
+   },
+   "log_highlights": [
+    "time=2026-10-27T22:28:23.293-04:00 level=INFO source=routes.go:2471 msg=\"server config\" env=\"map[CUDA_VISIBLE_DEVICES: GGML_VK_VISIBLE_DEVICES: GPU_DEVICE_ORDINAL: HIP_VISIBLE_DEVICES: HSA_OVERRIDE_GFX_VERSION: HTTPS_PROXY: HTTP_PROXY: LLAMA_ARG_FIT: LLAMA_ARG_FIT_TARGET: NO_PROXY: OLLAMA_CONTEXT_LENGTH:2048 OLLAMA_CREATE_REMOTE:false OLLAMA_DEBUG:INFO OLLAMA_DEBUG_LOG_REQUESTS:false OLLAMA_EDITOR",
+    "time=2026-10-27T22:28:23.368-04:00 level=INFO source=runner.go:60 msg=\"discovering available GPUs...\"",
+    "time=2026-10-27T22:28:28.331-04:00 level=INFO source=types.go:32 msg=\"inference compute\" id=0 filter_id=0 library=CUDA compute=8.6 name=CUDA0 description=\"NVIDIA GeForce RTX 3060 Laptop GPU\" libdirs=ollama,cuda_v13 driver=13.1 pci_id=0000:01:00.0 type=discrete total=\"6.0 GiB\" available=\"5.0 GiB\"",
+    "time=2026-10-27T22:28:30.232-04:00 level=INFO source=llama_server.go:457 msg=\"starting llama-server\" cmd=\"/home/karthik/llmbench/ollama/lib/ollama/llama-server --model /home/karthik/llmbench/ollama-models/blobs/sha256-2b9e80eacde5690a3a3cf6afcf44a3d53cdab6e0b777552fb64f055efc658956 --port 46795 --host 127.0.0.1 --no-webui --offline -c 32768 -np 16 --log-verbosity 4 --no-log-prefix --no-log-timesta",
+    "time=2026-10-27T22:28:30.233-04:00 level=INFO source=sched.go:665 msg=\"gpu memory\" id=0 library=CUDA available=\"4.6 GiB\" free=\"5.0 GiB\" minimum=\"457.0 MiB\" overhead=\"0 B\"",
+    "load_backend: loaded CPU backend from /home/karthik/llmbench/ollama/lib/ollama/libggml-cpu-alderlake.so",
+    "load_backend: loaded CUDA backend from /home/karthik/llmbench/ollama/lib/ollama/cuda_v13/libggml-cuda.so",
+    "print_info: n_ctx_train           = 32768",
+    "print_info: n_ctx_orig_yarn       = 32768",
+    "load_tensors: offloaded 29/29 layers to GPU",
+    "llama_context: n_seq_max             = 16",
+    "llama_context: n_ctx                 = 32768",
+    "llama_context: n_ctx_seq             = 2048",
+    "llama_context: flash_attn            = auto",
+    "llama_context: n_ctx_seq (2048) < n_ctx_train (32768) -- the full capacity of the model will not be utilized",
+    "llama_kv_cache:      CUDA0 KV buffer size =   896.00 MiB",
+    "llama_kv_cache: size =  896.00 MiB (  2048 cells,  28 layers, 16/16 seqs), K (f16):  448.00 MiB, V (f16):  448.00 MiB",
+    "llama_kv_cache: n_rot_k = 0, n_embd_head_k_all = 128",
+    "llama_kv_cache: n_rot_v = 0, n_embd_head_k_all = 128",
+    "srv    load_model: initializing, n_slots = 16, n_ctx_slot = 2048, kv_unified = 'false'",
+    "slot   load_model: id  0 | task -1 | new slot, n_ctx = 2048",
+    "slot   load_model: id  1 | task -1 | new slot, n_ctx = 2048",
+    "slot   load_model: id  2 | task -1 | new slot, n_ctx = 2048",
+    "slot   load_model: id  3 | task -1 | new slot, n_ctx = 2048",
+    "slot   load_model: id  4 | task -1 | new slot, n_ctx = 2048",
+    "slot   load_model: id  5 | task -1 | new slot, n_ctx = 2048",
+    "slot   load_model: id  6 | task -1 | new slot, n_ctx = 2048",
+    "slot   load_model: id  7 | task -1 | new slot, n_ctx = 2048",
+    "slot   load_model: id  8 | task -1 | new slot, n_ctx = 2048",
+    "slot   load_model: id  9 | task -1 | new slot, n_ctx = 2048",
+    "slot   load_model: id 10 | task -1 | new slot, n_ctx = 2048",
+    "slot   load_model: id 11 | task -1 | new slot, n_ctx = 2048",
+    "slot   load_model: id 12 | task -1 | new slot, n_ctx = 2048",
+    "slot   load_model: id 13 | task -1 | new slot, n_ctx = 2048",
+    "slot   load_model: id 14 | task -1 | new slot, n_ctx = 2048",
+    "slot   load_model: id 15 | task -1 | new slot, n_ctx = 2048",
+    "time=2026-10-27T22:28:45.089-04:00 level=INFO source=sched.go:782 msg=\"loaded runners\" count=1",
+    "slot   operator(): id  0 | task 0 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 339",
+    "slot   operator(): id  1 | task 2 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 756",
+    "slot   operator(): id  2 | task 3 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 1022",
+    "slot   operator(): id  3 | task 4 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 1050",
+    "slot   operator(): id  4 | task 5 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 198",
+    "slot   operator(): id  5 | task 6 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 459",
+    "slot   operator(): id  6 | task 7 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 262",
+    "slot   operator(): id  7 | task 8 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 527",
+    "slot   operator(): id  8 | task 9 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 407",
+    "slot   operator(): id  9 | task 10 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 901",
+    "slot   operator(): id 10 | task 11 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 794",
+    "slot   operator(): id 11 | task 12 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 640",
+    "slot   operator(): id 12 | task 13 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 605",
+    "slot   operator(): id 13 | task 14 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 947",
+    "slot   operator(): id 14 | task 15 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 1135",
+    "slot   operator(): id 15 | task 16 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 1206",
+    "slot   operator(): id  0 | task 294 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 306",
+    "slot   operator(): id  1 | task 296 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 551",
+    "slot   operator(): id  2 | task 297 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 941",
+    "slot   operator(): id  3 | task 298 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 193",
+    "slot   operator(): id  4 | task 299 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 375",
+    "slot   operator(): id  5 | task 300 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 643",
+    "slot   operator(): id  6 | task 301 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 1010",
+    "slot   operator(): id  7 | task 302 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 1169",
+    "slot   operator(): id  8 | task 303 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 305",
+    "slot   operator(): id  9 | task 304 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 445",
+    "slot   operator(): id 10 | task 305 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 761",
+    "slot   operator(): id 11 | task 306 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 872",
+    "slot   operator(): id 12 | task 307 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 1124",
+    "slot   operator(): id 13 | task 308 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 529",
+    "slot   operator(): id 14 | task 309 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 838",
+    "slot   operator(): id 15 | task 310 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 1058",
+    "slot   operator(): id  0 | task 588 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 612",
+    "slot   operator(): id  1 | task 590 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 643",
+    "slot   operator(): id  2 | task 591 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 191",
+    "slot   operator(): id  3 | task 592 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 447",
+    "slot   operator(): id  4 | task 593 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 267",
+    "slot   operator(): id  5 | task 594 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 756",
+    "slot   operator(): id  6 | task 595 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 1043",
+    "slot   operator(): id  7 | task 596 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 1099",
+    "slot   operator(): id  8 | task 597 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 416",
+    "slot   operator(): id  9 | task 598 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 337",
+    "slot   operator(): id 10 | task 599 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 834",
+    "slot   operator(): id 11 | task 600 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 993",
+    "slot   operator(): id 12 | task 602 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 944",
+    "slot   operator(): id 13 | task 603 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 792",
+    "slot   operator(): id 14 | task 604 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 537",
+    "slot   operator(): id 15 | task 605 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 1204",
+    "slot   operator(): id  0 | task 881 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 273",
+    "slot   operator(): id  1 | task 883 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 938",
+    "slot   operator(): id  2 | task 884 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 916",
+    "slot   operator(): id  3 | task 885 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 722",
+    "slot   operator(): id  4 | task 886 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 1089",
+    "slot   operator(): id  5 | task 887 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 1138",
+    "slot   operator(): id  6 | task 888 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 347",
+    "slot   operator(): id  7 | task 889 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 452",
+    "slot   operator(): id  8 | task 890 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 788",
+    "slot   operator(): id  9 | task 891 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 413",
+    "slot   operator(): id 10 | task 892 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 498",
+    "slot   operator(): id 11 | task 893 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 982",
+    "slot   operator(): id 12 | task 894 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 226",
+    "slot   operator(): id 13 | task 895 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 639",
+    "slot   operator(): id 14 | task 896 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 678",
+    "slot   operator(): id 15 | task 897 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 1182",
+    "slot   operator(): id  0 | task 1175 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 342",
+    "slot   operator(): id  1 | task 1177 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 265",
+    "slot   operator(): id  2 | task 1178 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 950",
+    "slot   operator(): id  3 | task 1179 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 643",
+    "slot   operator(): id  4 | task 1180 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 1025",
+    "slot   operator(): id  5 | task 1181 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 608",
+    "slot   operator(): id  6 | task 1182 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 1209",
+    "slot   operator(): id  7 | task 1183 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 904",
+    "slot   operator(): id  8 | task 1450 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 341",
+    "slot   operator(): id  9 | task 1452 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 264",
+    "slot   operator(): id 10 | task 1453 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 607",
+    "slot   operator(): id 11 | task 1454 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 642",
+    "slot   operator(): id 12 | task 1455 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 903",
+    "slot   operator(): id 13 | task 1456 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 1208",
+    "slot   operator(): id 14 | task 1457 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 949",
+    "slot   operator(): id 15 | task 1458 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 1024",
+    "slot   operator(): id  0 | task 1715 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 461",
+    "slot   operator(): id  1 | task 1717 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 1052",
+    "slot   operator(): id  2 | task 1719 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 1136"
+   ],
+   "gpu_after_stop_mib": 384.0
+  },
+  {
+   "block": 2,
+   "server": "vllm",
+   "repeats": [
+    2,
+    3
+   ],
+   "baseline_gpu": {
+    "n_samples": 24,
+    "mem_used_mib_max": 384.0,
+    "mem_used_mib_min": 384.0,
+    "mem_total_mib": 6144.0,
+    "util_pct_mean": 0.08333333333333333,
+    "sm_clock_mhz_mean_busy": null,
+    "sm_clock_mhz_min_busy": null,
+    "temp_c_max": 69.0,
+    "power_w_mean": 15.067083333333334,
+    "clock_event_reasons_seen": [
+     "0x0000000000000001"
+    ]
+   },
+   "power_plan": "Turbo",
+   "launch_script": "#!/usr/bin/env bash\n# vLLM OpenAI-compatible server used by bench/study.py. Each result file stores this script.\n#   --dtype float16            the checkpoint is BF16; FP16 matches Ollama's F16 GGUF\n#   --max-model-len 2048       same per-request context as Ollama's OLLAMA_CONTEXT_LENGTH\n#   --max-num-seqs 16          at most 16 sequences in a batch, same as OLLAMA_NUM_PARALLEL\n#   --generation-config vllm   ignore the checkpoint's sampling defaults (repetition_penalty 1.1)\n#   --no-enable-prefix-caching  caching off on both servers (Ollama: LLAMA_ARG_CACHE_RAM=0); the\n#                               client's per-request tag would defeat it anyway\nset -euo pipefail\nexport HF_HUB_DISABLE_TELEMETRY=1 VLLM_NO_USAGE_STATS=1 DO_NOT_TRACK=1 HF_HUB_OFFLINE=1\nexec \"$HOME/llmbench/venv/bin/vllm\" serve Qwen/Qwen2.5-1.5B-Instruct \\\n  --revision 989aa7980e4cf806f80c7fef2b1adb7bc71aa306 \\\n  --served-model-name qwen2.5-1.5b-instruct \\\n  --dtype float16 \\\n  --max-model-len 2048 \\\n  --max-num-seqs 16 \\\n  --gpu-memory-utilization 0.80 \\\n  --generation-config vllm \\\n  --no-enable-prefix-caching \\\n  --seed 0 \\\n  --disable-uvicorn-access-log \\\n  --host 127.0.0.1 --port 8000\n",
+   "ready_s": 76.11584351199986,
+   "idle_loaded_gpu": {
+    "n_samples": 22,
+    "mem_used_mib_max": 5276.0,
+    "mem_used_mib_min": 5276.0,
+    "mem_total_mib": 6144.0,
+    "util_pct_mean": 19.40909090909091,
+    "sm_clock_mhz_mean_busy": null,
+    "sm_clock_mhz_min_busy": null,
+    "temp_c_max": 55.0,
+    "power_w_mean": 14.335,
+    "clock_event_reasons_seen": [
+     "0x0000000000000001"
+    ]
+   },
+   "details": {
+    "version": "0.32.0",
+    "models": {
+     "object": "list",
+     "data": [
+      {
+       "id": "qwen2.5-1.5b-instruct",
+       "object": "model",
+       "created": 1793155250,
+       "owned_by": "vllm",
+       "root": "Qwen/Qwen2.5-1.5B-Instruct",
+       "parent": null,
+       "max_model_len": 2048,
+       "permission": [
+        {
+         "id": "modelperm-81b8076678846cb3",
+         "object": "model_permission",
+         "created": 1793155250,
+         "allow_create_engine": false,
+         "allow_sampling": true,
+         "allow_logprobs": true,
+         "allow_search_indices": false,
+         "allow_view": true,
+         "allow_fine_tuning": false,
+         "organization": "*",
+         "group": null,
+         "is_blocking": false
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "warmup": {
+    "seconds": 30.645899565000036,
+    "requests": 96
+   },
+   "details_after": {
+    "version": "0.32.0",
+    "models": {
+     "object": "list",
+     "data": [
+      {
+       "id": "qwen2.5-1.5b-instruct",
+       "object": "model",
+       "created": 1793155723,
+       "owned_by": "vllm",
+       "root": "Qwen/Qwen2.5-1.5B-Instruct",
+       "parent": null,
+       "max_model_len": 2048,
+       "permission": [
+        {
+         "id": "modelperm-89ba4033ae77e4d7",
+         "object": "model_permission",
+         "created": 1793155723,
+         "allow_create_engine": false,
+         "allow_sampling": true,
+         "allow_logprobs": true,
+         "allow_search_indices": false,
+         "allow_view": true,
+         "allow_fine_tuning": false,
+         "organization": "*",
+         "group": null,
+         "is_blocking": false
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "log_highlights": [
+    "(APIServer pid=1449) INFO 10-27 22:39:46 [api_utils.py:286] non-default args: {'model_tag': 'Qwen/Qwen2.5-1.5B-Instruct', 'host': '127.0.0.1', 'disable_uvicorn_access_log': True, 'model': 'Qwen/Qwen2.5-1.5B-Instruct', 'dtype': 'float16', 'revision': '989aa7980e4cf806f80c7fef2b1adb7bc71aa306', 'max_model_len': 2048, 'served_model_name': ['qwen2.5-1.5b-instruct'], 'generation_config': 'vllm', 'gpu_m",
+    "(EngineCore pid=1501) INFO 10-27 22:40:11 [cuda.py:506] Using FLASH_ATTN attention backend out of potential backends: ['FLASH_ATTN', 'FLASHINFER', 'TRITON_ATTN', 'FLEX_ATTENTION'].",
+    "(EngineCore pid=1501) INFO 10-27 22:40:20 [default_loader.py:501] Loading weights took 8.01 seconds",
+    "(EngineCore pid=1501) INFO 10-27 22:40:23 [model_runner.py:424] Model loading took 2.98 GiB memory and 17.841480 seconds",
+    "(EngineCore pid=1501) INFO 10-27 22:40:23 [utils.py:347] Using LBNHC KV cache layout.",
+    "(EngineCore pid=1501) INFO 10-27 22:40:29 [decorators.py:319] [backbone] Directly load AOT compilation from path /home/karthik/.cache/vllm/torch_compile_cache/torch_aot_compile/a4bb1a1a7f8bb0c0ef1188df90694292c9d8fd3c425bab0235c51e22708bfcd3/rank_0_0/model",
+    "(EngineCore pid=1501) INFO 10-27 22:40:29 [monitor.py:62] [backbone] torch.compile took 0.86 s in total",
+    "(EngineCore pid=1501) INFO 10-27 22:40:33 [model_runner.py:1127] Graph capturing finished in 2 secs, took 0.08 GiB",
+    "(EngineCore pid=1501) INFO 10-27 22:40:33 [gpu_worker.py:759] Available KV cache memory: 1.5 GiB",
+    "(EngineCore pid=1501) INFO 10-27 22:40:33 [gpu_worker.py:774] CUDA graph memory profiling is enabled (default since v0.21.0). The current --gpu-memory-utilization=0.8000 is equivalent to --gpu-memory-utilization=0.7847 without CUDA graph memory profiling. To maintain the same effective KV cache size as before, increase --gpu-memory-utilization to 0.8153. To disable, set VLLM_MEMORY_PROFILER_ESTIMA",
+    "(EngineCore pid=1501) INFO 10-27 22:40:33 [kv_cache_utils.py:2327] GPU KV cache size: 56,048 tokens, Maximum concurrency for 2,048 tokens per request: 27.37x",
+    "(EngineCore pid=1501) INFO 10-27 22:40:36 [model_runner.py:1127] Graph capturing finished in 1 secs, took 0.05 GiB",
+    "(APIServer pid=1449) INFO 10-27 22:40:54 [loggers.py:335] Engine 000: Avg prompt throughput: 734.4 tokens/s, Avg generation throughput: 234.0 tokens/s, Running: 16 reqs, Waiting: 0 reqs, GPU KV cache usage: 26.7%",
+    "(APIServer pid=1449) INFO 10-27 22:41:04 [loggers.py:335] Engine 000: Avg prompt throughput: 2223.2 tokens/s, Avg generation throughput: 812.5 tokens/s, Running: 16 reqs, Waiting: 0 reqs, GPU KV cache usage: 26.3%",
+    "(APIServer pid=1449) INFO 10-27 22:41:14 [loggers.py:335] Engine 000: Avg prompt throughput: 2252.6 tokens/s, Avg generation throughput: 800.1 tokens/s, Running: 16 reqs, Waiting: 0 reqs, GPU KV cache usage: 26.2%",
+    "(APIServer pid=1449) INFO 10-27 22:41:24 [loggers.py:335] Engine 000: Avg prompt throughput: 1573.1 tokens/s, Avg generation throughput: 588.9 tokens/s, Running: 4 reqs, Waiting: 0 reqs, GPU KV cache usage: 5.9%",
+    "(APIServer pid=1449) INFO 10-27 22:41:34 [loggers.py:335] Engine 000: Avg prompt throughput: 757.7 tokens/s, Avg generation throughput: 287.8 tokens/s, Running: 4 reqs, Waiting: 0 reqs, GPU KV cache usage: 6.6%",
+    "(APIServer pid=1449) INFO 10-27 22:41:44 [loggers.py:335] Engine 000: Avg prompt throughput: 878.1 tokens/s, Avg generation throughput: 275.6 tokens/s, Running: 4 reqs, Waiting: 0 reqs, GPU KV cache usage: 6.9%",
+    "(APIServer pid=1449) INFO 10-27 22:41:54 [loggers.py:335] Engine 000: Avg prompt throughput: 485.0 tokens/s, Avg generation throughput: 255.6 tokens/s, Running: 0 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.0%",
+    "(APIServer pid=1449) INFO 10-27 22:42:04 [loggers.py:335] Engine 000: Avg prompt throughput: 2255.8 tokens/s, Avg generation throughput: 487.9 tokens/s, Running: 16 reqs, Waiting: 0 reqs, GPU KV cache usage: 21.7%",
+    "(APIServer pid=1449) INFO 10-27 22:42:14 [loggers.py:335] Engine 000: Avg prompt throughput: 1978.8 tokens/s, Avg generation throughput: 744.5 tokens/s, Running: 16 reqs, Waiting: 0 reqs, GPU KV cache usage: 19.8%",
+    "(APIServer pid=1449) INFO 10-27 22:42:24 [loggers.py:335] Engine 000: Avg prompt throughput: 1591.4 tokens/s, Avg generation throughput: 814.4 tokens/s, Running: 11 reqs, Waiting: 0 reqs, GPU KV cache usage: 17.0%",
+    "(APIServer pid=1449) INFO 10-27 22:42:34 [loggers.py:335] Engine 000: Avg prompt throughput: 2030.7 tokens/s, Avg generation throughput: 768.5 tokens/s, Running: 16 reqs, Waiting: 0 reqs, GPU KV cache usage: 26.5%",
+    "(APIServer pid=1449) INFO 10-27 22:42:44 [loggers.py:335] Engine 000: Avg prompt throughput: 2244.7 tokens/s, Avg generation throughput: 687.8 tokens/s, Running: 16 reqs, Waiting: 0 reqs, GPU KV cache usage: 24.5%",
+    "(APIServer pid=1449) INFO 10-27 22:42:54 [loggers.py:335] Engine 000: Avg prompt throughput: 241.7 tokens/s, Avg generation throughput: 218.9 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 2.3%",
+    "(APIServer pid=1449) INFO 10-27 22:43:04 [loggers.py:335] Engine 000: Avg prompt throughput: 219.1 tokens/s, Avg generation throughput: 85.2 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.8%",
+    "(APIServer pid=1449) INFO 10-27 22:43:14 [loggers.py:335] Engine 000: Avg prompt throughput: 253.9 tokens/s, Avg generation throughput: 84.9 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 1.2%",
+    "(APIServer pid=1449) INFO 10-27 22:43:24 [loggers.py:335] Engine 000: Avg prompt throughput: 264.9 tokens/s, Avg generation throughput: 83.7 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 2.2%",
+    "(APIServer pid=1449) INFO 10-27 22:43:34 [loggers.py:335] Engine 000: Avg prompt throughput: 175.1 tokens/s, Avg generation throughput: 85.2 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 1.7%",
+    "(APIServer pid=1449) INFO 10-27 22:43:44 [loggers.py:335] Engine 000: Avg prompt throughput: 93.6 tokens/s, Avg generation throughput: 60.2 tokens/s, Running: 0 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.0%",
+    "(APIServer pid=1449) INFO 10-27 22:43:54 [loggers.py:335] Engine 000: Avg prompt throughput: 551.1 tokens/s, Avg generation throughput: 132.5 tokens/s, Running: 2 reqs, Waiting: 0 reqs, GPU KV cache usage: 2.9%",
+    "(APIServer pid=1449) INFO 10-27 22:44:04 [loggers.py:335] Engine 000: Avg prompt throughput: 405.2 tokens/s, Avg generation throughput: 143.0 tokens/s, Running: 2 reqs, Waiting: 0 reqs, GPU KV cache usage: 3.1%",
+    "(APIServer pid=1449) INFO 10-27 22:44:14 [loggers.py:335] Engine 000: Avg prompt throughput: 382.2 tokens/s, Avg generation throughput: 143.8 tokens/s, Running: 2 reqs, Waiting: 0 reqs, GPU KV cache usage: 1.9%",
+    "(APIServer pid=1449) INFO 10-27 22:44:24 [loggers.py:335] Engine 000: Avg prompt throughput: 594.5 tokens/s, Avg generation throughput: 216.1 tokens/s, Running: 8 reqs, Waiting: 0 reqs, GPU KV cache usage: 13.8%",
+    "(APIServer pid=1449) INFO 10-27 22:44:34 [loggers.py:335] Engine 000: Avg prompt throughput: 1424.6 tokens/s, Avg generation throughput: 440.4 tokens/s, Running: 8 reqs, Waiting: 0 reqs, GPU KV cache usage: 10.1%",
+    "(APIServer pid=1449) INFO 10-27 22:44:44 [loggers.py:335] Engine 000: Avg prompt throughput: 1299.5 tokens/s, Avg generation throughput: 471.0 tokens/s, Running: 8 reqs, Waiting: 0 reqs, GPU KV cache usage: 9.8%",
+    "(APIServer pid=1449) INFO 10-27 22:44:54 [loggers.py:335] Engine 000: Avg prompt throughput: 1265.3 tokens/s, Avg generation throughput: 460.6 tokens/s, Running: 8 reqs, Waiting: 0 reqs, GPU KV cache usage: 13.4%",
+    "(APIServer pid=1449) INFO 10-27 22:45:04 [loggers.py:335] Engine 000: Avg prompt throughput: 708.0 tokens/s, Avg generation throughput: 301.4 tokens/s, Running: 2 reqs, Waiting: 0 reqs, GPU KV cache usage: 3.9%",
+    "(APIServer pid=1449) INFO 10-27 22:45:14 [loggers.py:335] Engine 000: Avg prompt throughput: 434.6 tokens/s, Avg generation throughput: 149.0 tokens/s, Running: 2 reqs, Waiting: 0 reqs, GPU KV cache usage: 1.7%",
+    "(APIServer pid=1449) INFO 10-27 22:45:24 [loggers.py:335] Engine 000: Avg prompt throughput: 310.4 tokens/s, Avg generation throughput: 150.0 tokens/s, Running: 2 reqs, Waiting: 0 reqs, GPU KV cache usage: 3.6%",
+    "(APIServer pid=1449) INFO 10-27 22:45:34 [loggers.py:335] Engine 000: Avg prompt throughput: 382.3 tokens/s, Avg generation throughput: 149.8 tokens/s, Running: 2 reqs, Waiting: 0 reqs, GPU KV cache usage: 2.5%",
+    "(APIServer pid=1449) INFO 10-27 22:45:44 [loggers.py:335] Engine 000: Avg prompt throughput: 1658.5 tokens/s, Avg generation throughput: 417.6 tokens/s, Running: 10 reqs, Waiting: 6 reqs, GPU KV cache usage: 13.2%",
+    "(APIServer pid=1449) INFO 10-27 22:45:54 [loggers.py:335] Engine 000: Avg prompt throughput: 1739.0 tokens/s, Avg generation throughput: 816.7 tokens/s, Running: 10 reqs, Waiting: 0 reqs, GPU KV cache usage: 14.4%",
+    "(APIServer pid=1449) INFO 10-27 22:46:04 [loggers.py:335] Engine 000: Avg prompt throughput: 2217.6 tokens/s, Avg generation throughput: 740.5 tokens/s, Running: 16 reqs, Waiting: 0 reqs, GPU KV cache usage: 26.4%",
+    "(APIServer pid=1449) INFO 10-27 22:46:14 [loggers.py:335] Engine 000: Avg prompt throughput: 2241.8 tokens/s, Avg generation throughput: 735.5 tokens/s, Running: 16 reqs, Waiting: 0 reqs, GPU KV cache usage: 24.5%",
+    "(APIServer pid=1449) INFO 10-27 22:46:24 [loggers.py:335] Engine 000: Avg prompt throughput: 2244.4 tokens/s, Avg generation throughput: 714.8 tokens/s, Running: 16 reqs, Waiting: 0 reqs, GPU KV cache usage: 22.9%",
+    "(APIServer pid=1449) INFO 10-27 22:46:34 [loggers.py:335] Engine 000: Avg prompt throughput: 241.7 tokens/s, Avg generation throughput: 299.1 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 2.3%",
+    "(APIServer pid=1449) INFO 10-27 22:46:44 [loggers.py:335] Engine 000: Avg prompt throughput: 219.0 tokens/s, Avg generation throughput: 87.1 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.8%",
+    "(APIServer pid=1449) INFO 10-27 22:46:54 [loggers.py:335] Engine 000: Avg prompt throughput: 189.7 tokens/s, Avg generation throughput: 86.4 tokens/s, Running: 0 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.0%",
+    "(APIServer pid=1449) INFO 10-27 22:47:04 [loggers.py:335] Engine 000: Avg prompt throughput: 329.1 tokens/s, Avg generation throughput: 85.4 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 2.2%",
+    "(APIServer pid=1449) INFO 10-27 22:47:14 [loggers.py:335] Engine 000: Avg prompt throughput: 175.1 tokens/s, Avg generation throughput: 87.2 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 1.7%",
+    "(APIServer pid=1449) INFO 10-27 22:47:24 [loggers.py:335] Engine 000: Avg prompt throughput: 93.6 tokens/s, Avg generation throughput: 57.8 tokens/s, Running: 0 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.0%",
+    "(APIServer pid=1449) INFO 10-27 22:47:34 [loggers.py:335] Engine 000: Avg prompt throughput: 1721.8 tokens/s, Avg generation throughput: 444.0 tokens/s, Running: 8 reqs, Waiting: 0 reqs, GPU KV cache usage: 10.3%",
+    "(APIServer pid=1449) INFO 10-27 22:47:44 [loggers.py:335] Engine 000: Avg prompt throughput: 1114.4 tokens/s, Avg generation throughput: 496.3 tokens/s, Running: 8 reqs, Waiting: 0 reqs, GPU KV cache usage: 10.9%",
+    "(APIServer pid=1449) INFO 10-27 22:47:54 [loggers.py:335] Engine 000: Avg prompt throughput: 1113.8 tokens/s, Avg generation throughput: 492.3 tokens/s, Running: 5 reqs, Waiting: 0 reqs, GPU KV cache usage: 8.7%",
+    "(APIServer pid=1449) INFO 10-27 22:48:04 [loggers.py:335] Engine 000: Avg prompt throughput: 1130.6 tokens/s, Avg generation throughput: 410.1 tokens/s, Running: 0 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.0%",
+    "(APIServer pid=1449) INFO 10-27 22:48:14 [loggers.py:335] Engine 000: Avg prompt throughput: 714.2 tokens/s, Avg generation throughput: 204.9 tokens/s, Running: 3 reqs, Waiting: 0 reqs, GPU KV cache usage: 3.4%",
+    "(APIServer pid=1449) INFO 10-27 22:48:24 [loggers.py:335] Engine 000: Avg prompt throughput: 753.3 tokens/s, Avg generation throughput: 283.8 tokens/s, Running: 4 reqs, Waiting: 0 reqs, GPU KV cache usage: 5.9%",
+    "(APIServer pid=1449) INFO 10-27 22:48:34 [loggers.py:335] Engine 000: Avg prompt throughput: 871.8 tokens/s, Avg generation throughput: 269.6 tokens/s, Running: 4 reqs, Waiting: 0 reqs, GPU KV cache usage: 5.1%"
+   ],
+   "gpu_after_stop_mib": 427.0
+  },
+  {
+   "block": 3,
+   "server": "ollama",
+   "repeats": [
+    3
+   ],
+   "baseline_gpu": {
+    "n_samples": 24,
+    "mem_used_mib_max": 427.0,
+    "mem_used_mib_min": 427.0,
+    "mem_total_mib": 6144.0,
+    "util_pct_mean": 0.0,
+    "sm_clock_mhz_mean_busy": null,
+    "sm_clock_mhz_min_busy": null,
+    "temp_c_max": 65.0,
+    "power_w_mean": 16.5675,
+    "clock_event_reasons_seen": [
+     "0x0000000000000001"
+    ]
+   },
+   "power_plan": "Turbo",
+   "launch_script": "#!/usr/bin/env bash\n# Ollama server used by bench/study.py (user-space install from scripts/setup_ollama.sh).\n#   OLLAMA_NUM_PARALLEL=16      16 request slots, so it can batch up to the highest concurrency\n#   OLLAMA_CONTEXT_LENGTH=2048  per-request context, same as vLLM --max-model-len\n#   port 11435                  keeps clear of the Windows Ollama app on 11434\n#   LLAMA_ARG_CACHE_RAM=0       turns off llama-server's host-RAM prompt cache. Its default 8 GiB limit\n#                               is more than this WSL instance's 7.6 GB of RAM, and the workload gives it\n#                               nothing to reuse (see results/aborted/attempt2_1c2d0a3/NOTE.md)\n# Everything else (flash attention, KV cache type f16) stays at Ollama's defaults.\nset -euo pipefail\nexport OLLAMA_HOST=127.0.0.1:11435\nexport OLLAMA_MODELS=\"$HOME/llmbench/ollama-models\"\nexport OLLAMA_NUM_PARALLEL=16\nexport OLLAMA_CONTEXT_LENGTH=2048\nexport OLLAMA_KEEP_ALIVE=-1\nexport OLLAMA_MAX_LOADED_MODELS=1\nexport OLLAMA_NOHISTORY=1\nexport LLAMA_ARG_CACHE_RAM=0\nexec \"$HOME/llmbench/ollama/bin/ollama\" serve\n",
+   "ready_s": 7.250480056000015,
+   "model_load_s": 18.13930788799962,
+   "idle_loaded_gpu": {
+    "n_samples": 23,
+    "mem_used_mib_max": 4474.0,
+    "mem_used_mib_min": 4474.0,
+    "mem_total_mib": 6144.0,
+    "util_pct_mean": 0.0,
+    "sm_clock_mhz_mean_busy": null,
+    "sm_clock_mhz_min_busy": null,
+    "temp_c_max": 62.0,
+    "power_w_mean": 19.15826086956522,
+    "clock_event_reasons_seen": [
+     "0x0000000000000001"
+    ]
+   },
+   "details": {
+    "version": "0.40.12",
+    "show": {
+     "details": {
+      "parent_model": "qwen2.5:1.5b-instruct-fp16",
+      "format": "gguf",
+      "family": "qwen2",
+      "families": [
+       "qwen2"
+      ],
+      "parameter_size": "1.5B",
+      "quantization_level": "F16",
+      "runner": "llamacpp"
+     },
+     "parameters": "repeat_penalty                 1\ntemperature                    0\ntop_p                          1\nnum_ctx                        2048",
+     "modified_at": "2026-10-27T21:53:06.126876596-04:00",
+     "capabilities": [
+      "completion",
+      "tools"
+     ],
+     "model_info": {
+      "general.architecture": "qwen2",
+      "general.base_model.0.name": "Qwen2.5 1.5B",
+      "general.base_model.0.organization": "Qwen",
+      "general.base_model.0.repo_url": "https://huggingface.co/Qwen/Qwen2.5-1.5B",
+      "general.base_model.count": 1,
+      "general.basename": "Qwen2.5",
+      "general.file_type": 1,
+      "general.finetune": "Instruct",
+      "general.license": "apache-2.0",
+      "general.license.link": "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct/blob/main/LICENSE",
+      "general.parameter_count": 1543714304,
+      "general.quantization_version": 2,
+      "general.size_label": "1.5B",
+      "general.type": "model",
+      "qwen2.attention.head_count": 12,
+      "qwen2.attention.head_count_kv": 2,
+      "qwen2.attention.layer_norm_rms_epsilon": 1e-06,
+      "qwen2.block_count": 28,
+      "qwen2.context_length": 32768,
+      "qwen2.embedding_length": 1536,
+      "qwen2.feed_forward_length": 8960,
+      "qwen2.rope.freq_base": 1000000,
+      "tokenizer.ggml.add_bos_token": false,
+      "tokenizer.ggml.bos_token_id": 151643,
+      "tokenizer.ggml.eos_token_id": 151645,
+      "tokenizer.ggml.model": "gpt2",
+      "tokenizer.ggml.padding_token_id": 151643,
+      "tokenizer.ggml.pre": "qwen2"
+     }
+    },
+    "ps": {
+     "models": [
+      {
+       "name": "qwen2.5-1.5b-bench:latest",
+       "model": "qwen2.5-1.5b-bench:latest",
+       "size": 4096985660,
+       "digest": "55c2f08d214157bffc1c1103e9d8c1d2acc9b582a5bd71aa6d5e8f613d763c9d",
+       "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "qwen2",
+        "families": [
+         "qwen2"
+        ],
+        "parameter_size": "1.5B",
+        "quantization_level": "F16"
+       },
+       "expires_at": "2319-02-06T21:36:34.410037392-05:00",
+       "size_vram": 4096985660,
+       "context_length": 2048,
+       "runner": "llamacpp"
+      }
+     ]
+    },
+    "tags": [
+     {
+      "name": "qwen2.5-1.5b-bench:latest",
+      "model": "qwen2.5-1.5b-bench:latest",
+      "modified_at": "2026-10-27T21:53:06.126876596-04:00",
+      "size": 3093682443,
+      "digest": "55c2f08d214157bffc1c1103e9d8c1d2acc9b582a5bd71aa6d5e8f613d763c9d",
+      "details": {
+       "parent_model": "qwen2.5:1.5b-instruct-fp16",
+       "format": "gguf",
+       "family": "qwen2",
+       "families": [
+        "qwen2"
+       ],
+       "parameter_size": "1.5B",
+       "quantization_level": "F16",
+       "context_length": 32768,
+       "embedding_length": 1536,
+       "runner": "llamacpp"
+      },
+      "capabilities": [
+       "completion",
+       "tools"
+      ]
+     },
+     {
+      "name": "qwen2.5:1.5b-instruct-fp16",
+      "model": "qwen2.5:1.5b-instruct-fp16",
+      "modified_at": "2026-10-27T21:53:05.835823742-04:00",
+      "size": 3093682753,
+      "digest": "d8035f049126b916d6dd500c31d123e369f9e32867b05001c09c1da56fef739f",
+      "details": {
+       "parent_model": "/Users/ollama/.ollama/models/blobs/sha256-2b9e80eacde5690a3a3cf6afcf44a3d53cdab6e0b777552fb64f055efc658956",
+       "format": "gguf",
+       "family": "qwen2",
+       "families": [
+        "qwen2"
+       ],
+       "parameter_size": "1.5B",
+       "quantization_level": "F16",
+       "context_length": 32768,
+       "embedding_length": 1536,
+       "runner": "ggml"
+      },
+      "capabilities": [
+       "completion",
+       "tools"
+      ]
+     }
+    ]
+   },
+   "warmup": {
+    "seconds": 30.868127086000186,
+    "requests": 48
+   },
+   "details_after": {
+    "version": "0.40.12",
+    "show": {
+     "details": {
+      "parent_model": "qwen2.5:1.5b-instruct-fp16",
+      "format": "gguf",
+      "family": "qwen2",
+      "families": [
+       "qwen2"
+      ],
+      "parameter_size": "1.5B",
+      "quantization_level": "F16",
+      "runner": "llamacpp"
+     },
+     "parameters": "repeat_penalty                 1\ntemperature                    0\ntop_p                          1\nnum_ctx                        2048",
+     "modified_at": "2026-10-27T21:53:06.126876596-04:00",
+     "capabilities": [
+      "completion",
+      "tools"
+     ],
+     "model_info": {
+      "general.architecture": "qwen2",
+      "general.base_model.0.name": "Qwen2.5 1.5B",
+      "general.base_model.0.organization": "Qwen",
+      "general.base_model.0.repo_url": "https://huggingface.co/Qwen/Qwen2.5-1.5B",
+      "general.base_model.count": 1,
+      "general.basename": "Qwen2.5",
+      "general.file_type": 1,
+      "general.finetune": "Instruct",
+      "general.license": "apache-2.0",
+      "general.license.link": "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct/blob/main/LICENSE",
+      "general.parameter_count": 1543714304,
+      "general.quantization_version": 2,
+      "general.size_label": "1.5B",
+      "general.type": "model",
+      "qwen2.attention.head_count": 12,
+      "qwen2.attention.head_count_kv": 2,
+      "qwen2.attention.layer_norm_rms_epsilon": 1e-06,
+      "qwen2.block_count": 28,
+      "qwen2.context_length": 32768,
+      "qwen2.embedding_length": 1536,
+      "qwen2.feed_forward_length": 8960,
+      "qwen2.rope.freq_base": 1000000,
+      "tokenizer.ggml.add_bos_token": false,
+      "tokenizer.ggml.bos_token_id": 151643,
+      "tokenizer.ggml.eos_token_id": 151645,
+      "tokenizer.ggml.model": "gpt2",
+      "tokenizer.ggml.padding_token_id": 151643,
+      "tokenizer.ggml.pre": "qwen2"
+     }
+    },
+    "ps": {
+     "models": [
+      {
+       "name": "qwen2.5-1.5b-bench:latest",
+       "model": "qwen2.5-1.5b-bench:latest",
+       "size": 4096985660,
+       "digest": "55c2f08d214157bffc1c1103e9d8c1d2acc9b582a5bd71aa6d5e8f613d763c9d",
+       "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "qwen2",
+        "families": [
+         "qwen2"
+        ],
+        "parameter_size": "1.5B",
+        "quantization_level": "F16"
+       },
+       "expires_at": "2319-02-06T21:42:46.197852144-05:00",
+       "size_vram": 4096985660,
+       "context_length": 2048,
+       "runner": "llamacpp"
+      }
+     ]
+    },
+    "tags": [
+     {
+      "name": "qwen2.5-1.5b-bench:latest",
+      "model": "qwen2.5-1.5b-bench:latest",
+      "modified_at": "2026-10-27T21:53:06.126876596-04:00",
+      "size": 3093682443,
+      "digest": "55c2f08d214157bffc1c1103e9d8c1d2acc9b582a5bd71aa6d5e8f613d763c9d",
+      "details": {
+       "parent_model": "qwen2.5:1.5b-instruct-fp16",
+       "format": "gguf",
+       "family": "qwen2",
+       "families": [
+        "qwen2"
+       ],
+       "parameter_size": "1.5B",
+       "quantization_level": "F16",
+       "context_length": 32768,
+       "embedding_length": 1536,
+       "runner": "llamacpp"
+      },
+      "capabilities": [
+       "completion",
+       "tools"
+      ]
+     },
+     {
+      "name": "qwen2.5:1.5b-instruct-fp16",
+      "model": "qwen2.5:1.5b-instruct-fp16",
+      "modified_at": "2026-10-27T21:53:05.835823742-04:00",
+      "size": 3093682753,
+      "digest": "d8035f049126b916d6dd500c31d123e369f9e32867b05001c09c1da56fef739f",
+      "details": {
+       "parent_model": "/Users/ollama/.ollama/models/blobs/sha256-2b9e80eacde5690a3a3cf6afcf44a3d53cdab6e0b777552fb64f055efc658956",
+       "format": "gguf",
+       "family": "qwen2",
+       "families": [
+        "qwen2"
+       ],
+       "parameter_size": "1.5B",
+       "quantization_level": "F16",
+       "context_length": 32768,
+       "embedding_length": 1536,
+       "runner": "ggml"
+      },
+      "capabilities": [
+       "completion",
+       "tools"
+      ]
+     }
+    ]
+   },
+   "log_highlights": [
+    "time=2026-10-27T22:48:52.572-04:00 level=INFO source=routes.go:2471 msg=\"server config\" env=\"map[CUDA_VISIBLE_DEVICES: GGML_VK_VISIBLE_DEVICES: GPU_DEVICE_ORDINAL: HIP_VISIBLE_DEVICES: HSA_OVERRIDE_GFX_VERSION: HTTPS_PROXY: HTTP_PROXY: LLAMA_ARG_FIT: LLAMA_ARG_FIT_TARGET: NO_PROXY: OLLAMA_CONTEXT_LENGTH:2048 OLLAMA_CREATE_REMOTE:false OLLAMA_DEBUG:INFO OLLAMA_DEBUG_LOG_REQUESTS:false OLLAMA_EDITOR",
+    "time=2026-10-27T22:48:52.607-04:00 level=INFO source=runner.go:60 msg=\"discovering available GPUs...\"",
+    "time=2026-10-27T22:48:59.455-04:00 level=INFO source=types.go:32 msg=\"inference compute\" id=0 filter_id=0 library=CUDA compute=8.6 name=CUDA0 description=\"NVIDIA GeForce RTX 3060 Laptop GPU\" libdirs=ollama,cuda_v13 driver=13.1 pci_id=0000:01:00.0 type=discrete total=\"6.0 GiB\" available=\"5.0 GiB\"",
+    "time=2026-10-27T22:49:00.395-04:00 level=INFO source=llama_server.go:457 msg=\"starting llama-server\" cmd=\"/home/karthik/llmbench/ollama/lib/ollama/llama-server --model /home/karthik/llmbench/ollama-models/blobs/sha256-2b9e80eacde5690a3a3cf6afcf44a3d53cdab6e0b777552fb64f055efc658956 --port 41373 --host 127.0.0.1 --no-webui --offline -c 32768 -np 16 --log-verbosity 4 --no-log-prefix --no-log-timesta",
+    "time=2026-10-27T22:49:00.396-04:00 level=INFO source=sched.go:665 msg=\"gpu memory\" id=0 library=CUDA available=\"4.6 GiB\" free=\"5.0 GiB\" minimum=\"457.0 MiB\" overhead=\"0 B\"",
+    "load_backend: loaded CPU backend from /home/karthik/llmbench/ollama/lib/ollama/libggml-cpu-alderlake.so",
+    "load_backend: loaded CUDA backend from /home/karthik/llmbench/ollama/lib/ollama/cuda_v13/libggml-cuda.so",
+    "print_info: n_ctx_train           = 32768",
+    "print_info: n_ctx_orig_yarn       = 32768",
+    "load_tensors: offloaded 29/29 layers to GPU",
+    "llama_context: n_seq_max             = 16",
+    "llama_context: n_ctx                 = 32768",
+    "llama_context: n_ctx_seq             = 2048",
+    "llama_context: flash_attn            = auto",
+    "llama_context: n_ctx_seq (2048) < n_ctx_train (32768) -- the full capacity of the model will not be utilized",
+    "llama_kv_cache:      CUDA0 KV buffer size =   896.00 MiB",
+    "llama_kv_cache: size =  896.00 MiB (  2048 cells,  28 layers, 16/16 seqs), K (f16):  448.00 MiB, V (f16):  448.00 MiB",
+    "llama_kv_cache: n_rot_k = 0, n_embd_head_k_all = 128",
+    "llama_kv_cache: n_rot_v = 0, n_embd_head_k_all = 128",
+    "srv    load_model: initializing, n_slots = 16, n_ctx_slot = 2048, kv_unified = 'false'",
+    "slot   load_model: id  0 | task -1 | new slot, n_ctx = 2048",
+    "slot   load_model: id  1 | task -1 | new slot, n_ctx = 2048",
+    "slot   load_model: id  2 | task -1 | new slot, n_ctx = 2048",
+    "slot   load_model: id  3 | task -1 | new slot, n_ctx = 2048",
+    "slot   load_model: id  4 | task -1 | new slot, n_ctx = 2048",
+    "slot   load_model: id  5 | task -1 | new slot, n_ctx = 2048",
+    "slot   load_model: id  6 | task -1 | new slot, n_ctx = 2048",
+    "slot   load_model: id  7 | task -1 | new slot, n_ctx = 2048",
+    "slot   load_model: id  8 | task -1 | new slot, n_ctx = 2048",
+    "slot   load_model: id  9 | task -1 | new slot, n_ctx = 2048",
+    "slot   load_model: id 10 | task -1 | new slot, n_ctx = 2048",
+    "slot   load_model: id 11 | task -1 | new slot, n_ctx = 2048",
+    "slot   load_model: id 12 | task -1 | new slot, n_ctx = 2048",
+    "slot   load_model: id 13 | task -1 | new slot, n_ctx = 2048",
+    "slot   load_model: id 14 | task -1 | new slot, n_ctx = 2048",
+    "slot   load_model: id 15 | task -1 | new slot, n_ctx = 2048",
+    "time=2026-10-27T22:49:17.543-04:00 level=INFO source=sched.go:782 msg=\"loaded runners\" count=1",
+    "slot   operator(): id  0 | task 2 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 407",
+    "slot   operator(): id  1 | task 1 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 339",
+    "slot   operator(): id  2 | task 3 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 527",
+    "slot   operator(): id  3 | task 0 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 459",
+    "slot   operator(): id  4 | task 4 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 198",
+    "slot   operator(): id  5 | task 5 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 262",
+    "slot   operator(): id  6 | task 7 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 1022",
+    "slot   operator(): id  7 | task 8 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 794",
+    "slot   operator(): id  8 | task 9 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 756",
+    "slot   operator(): id  9 | task 10 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 605",
+    "slot   operator(): id 10 | task 11 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 901",
+    "slot   operator(): id 11 | task 12 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 947",
+    "slot   operator(): id 12 | task 13 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 640",
+    "slot   operator(): id 13 | task 14 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 1135",
+    "slot   operator(): id 14 | task 15 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 1050",
+    "slot   operator(): id 15 | task 16 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 1206",
+    "slot   operator(): id  0 | task 294 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 305",
+    "slot   operator(): id  1 | task 296 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 193",
+    "slot   operator(): id  2 | task 297 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 529",
+    "slot   operator(): id  3 | task 298 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 306",
+    "slot   operator(): id  4 | task 299 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 375",
+    "slot   operator(): id  5 | task 300 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 445",
+    "slot   operator(): id  6 | task 301 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 1124",
+    "slot   operator(): id  7 | task 302 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 551",
+    "slot   operator(): id  8 | task 303 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 643",
+    "slot   operator(): id  9 | task 304 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 838",
+    "slot   operator(): id 10 | task 305 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 872",
+    "slot   operator(): id 11 | task 306 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 941",
+    "slot   operator(): id 12 | task 307 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 1010",
+    "slot   operator(): id 13 | task 308 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 1169",
+    "slot   operator(): id 14 | task 309 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 761",
+    "slot   operator(): id 15 | task 310 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 1058",
+    "slot   operator(): id  0 | task 588 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 267",
+    "slot   operator(): id  1 | task 590 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 337",
+    "slot   operator(): id  2 | task 591 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 756",
+    "slot   operator(): id  3 | task 592 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 416",
+    "slot   operator(): id  4 | task 593 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 944",
+    "slot   operator(): id  5 | task 594 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 612",
+    "slot   operator(): id  6 | task 595 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 643",
+    "slot   operator(): id  7 | task 596 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 537",
+    "slot   operator(): id  8 | task 597 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 792",
+    "slot   operator(): id  9 | task 598 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 447",
+    "slot   operator(): id 10 | task 599 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 191",
+    "slot   operator(): id 11 | task 600 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 834",
+    "slot   operator(): id 12 | task 601 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 1099",
+    "slot   operator(): id 13 | task 602 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 1043",
+    "slot   operator(): id 14 | task 603 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 1204",
+    "slot   operator(): id 15 | task 604 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 993",
+    "slot   operator(): id  0 | task 882 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 904",
+    "slot   operator(): id  1 | task 884 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 1209",
+    "slot   operator(): id  2 | task 1144 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 903",
+    "slot   operator(): id  3 | task 1146 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 1208",
+    "slot   operator(): id  4 | task 1405 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 1024",
+    "slot   operator(): id  5 | task 1408 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 264",
+    "slot   operator(): id  6 | task 1665 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 341",
+    "slot   operator(): id  7 | task 1667 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 607",
+    "slot   operator(): id  8 | task 1925 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 949",
+    "slot   operator(): id  9 | task 1928 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 642",
+    "slot   operator(): id 10 | task 2185 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 461",
+    "slot   operator(): id 11 | task 2189 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 1052",
+    "slot   operator(): id 12 | task 2445 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 1136",
+    "slot   operator(): id 13 | task 2450 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 199",
+    "slot   operator(): id 14 | task 2707 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 795",
+    "slot   operator(): id 15 | task 2709 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 757",
+    "slot   operator(): id  0 | task 2967 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 528",
+    "slot   operator(): id  1 | task 2970 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 408",
+    "slot   operator(): id  2 | task 3227 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 409",
+    "slot   operator(): id  0 | task 3243 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 1053",
+    "slot   operator(): id  1 | task 3242 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 950",
+    "slot   operator(): id  3 | task 3229 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 462",
+    "slot   operator(): id  4 | task 3230 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 643",
+    "slot   operator(): id  5 | task 3231 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 342",
+    "slot   operator(): id  6 | task 3232 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 1137",
+    "slot   operator(): id  7 | task 3233 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 796",
+    "slot   operator(): id  8 | task 3234 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 1025",
+    "slot   operator(): id  9 | task 3235 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 265",
+    "slot   operator(): id 10 | task 3236 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 200",
+    "slot   operator(): id 11 | task 3237 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 904",
+    "slot   operator(): id 12 | task 3238 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 529",
+    "slot   operator(): id 13 | task 3239 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 758",
+    "slot   operator(): id 14 | task 3240 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 608",
+    "slot   operator(): id 15 | task 3241 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 1209",
+    "slot   operator(): id  2 | task 3521 | new prompt, n_ctx_slot = 2048, n_keep = 4, task.n_tokens = 461"
+   ],
+   "gpu_after_stop_mib": 457.0
+  }
+ ],
+ "finished_at": "2026-10-27T22:55:33-04:00"
+}

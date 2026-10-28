@@ -77,8 +77,59 @@ def analyze(runs: list[dict]) -> dict:
                            "max_ms": g[-1] * 1000,
                            "share_over_3x_median": sum(x > 3 * med for x in g) / len(g)}
         res["token_gaps"] = gaps
+        res["itl_modes"] = itl_modes(by, s, levels)
+        res["ttft_backlog_c16"] = ttft_backlog(by[(s, max(levels))])
+        res["gpu_util_pct"] = {c: statistics.median(r["gpu"]["util_pct_mean"] for r in by[(s, c)])
+                               for c in levels if by[(s, c)]}
+        mem_clk = [x["clocks.mem"] for (srv, _), rs in by.items() if srv == s for r in rs
+                   for x in r["gpu_samples"] if (x.get("utilization.gpu") or 0) >= 50 and x.get("clocks.mem")]
+        res["mem_clock_mhz_busy"] = {"min": min(mem_clk), "max": max(mem_clk)} if mem_clk else None
         out[s] = res
     return out
+
+
+def itl_modes(by: dict, s: str, levels: list[int]) -> dict:
+    """Per-request ITL can fall into a fast and a slow mode (seen on Ollama at c=4 and 8). A request
+    counts as slow when its ITL exceeds 1.4x the fastest quartile seen at that level in any repeat."""
+    out = {}
+    for c in levels:
+        runs = by[(s, c)]
+        if not runs:
+            continue
+        per_run = {r["repeat"]: sorted(q["itl"] for q in r["requests"] if q["ok"] and q["itl"])
+                   for r in runs}
+        fast_ref = min(v[len(v) // 4] for v in per_run.values() if v)
+        cut = 1.4 * fast_ref
+        out[c] = {"threshold_ms": cut * 1000, "runs": {}}
+        for rep, v in sorted(per_run.items()):
+            slow = [x for x in v if x > cut]
+            fast = [x for x in v if x <= cut]
+            out[c]["runs"][rep] = {
+                "slow_share": len(slow) / len(v),
+                "fast_itl_ms": statistics.median(fast) * 1000 if fast else None,
+                "slow_itl_ms": statistics.median(slow) * 1000 if slow else None}
+    return out
+
+
+def ttft_backlog(runs: list[dict]) -> dict:
+    """For each request after the first wave: how many earlier requests were still waiting for their
+    first token when it was sent, and the TTFT it then saw. Separates 'slower prefill' from 'more
+    prompts queued ahead', which a closed loop produces when completions arrive in bunches."""
+    rows = []
+    for r in runs:
+        reqs = [q for q in r["requests"] if q["ok"]]
+        c = r["concurrency"]
+        for q in reqs[c:]:
+            ahead = [o for o in reqs if o is not q and o["t_send"] < q["t_send"] < o["t_send"] + o["ttft"]]
+            rows.append((len(ahead), sum(o["prompt_tokens"] or 0 for o in ahead), q["ttft"]))
+    if not rows:
+        return {}
+    bins = {}
+    for label, lo, hi in (("0", 0, 0), ("1", 1, 1), ("2-3", 2, 3), ("4+", 4, 10**6)):
+        v = [t for k, _, t in rows if lo <= k <= hi]
+        bins[label] = {"n": len(v), "ttft_p50_ms": statistics.median(v) * 1000 if v else None}
+    return {"n": len(rows), "mean_requests_ahead": statistics.fmean(k for k, _, _ in rows),
+            "mean_prompt_tokens_ahead": statistics.fmean(t for _, t, _ in rows), "by_requests_ahead": bins}
 
 
 def to_markdown(a: dict) -> str:
@@ -101,7 +152,9 @@ def to_markdown(a: dict) -> str:
     row("Prefill at c=1, fitted (prompt tok/s)", lambda r: f"{r['prefill_c1']['prefill_tok_per_s']:,.0f}")
     row("Fixed TTFT overhead at c=1, fitted (ms)", lambda r: f"{r['prefill_c1']['overhead_ms']:.0f}")
     row("Fit quality r² (TTFT vs prompt tokens)", lambda r: f"{r['prefill_c1']['r2']:.2f}")
-    row("ITL at c=1 (ms)", lambda r: f"{r['decode_c1']['itl_ms']:.1f}")
+    row("ITL at c=1, all requests pooled (ms)", lambda r: f"{r['decode_c1']['itl_ms']:.1f}")
+    row("Memory clock while busy, all runs (MHz, min-max)",
+        lambda r: f"{r['mem_clock_mhz_busy']['min']:,.0f}–{r['mem_clock_mhz_busy']['max']:,.0f}")
     row("Weight bandwidth implied at c=1 (GB/s)", lambda r: f"{r['decode_c1']['effective_weight_bw_GB_s']:.0f}")
     row("Share of spec bandwidth at c=1", lambda r: f"{r['decode_c1']['share_of_spec_bw']:.0%}")
     for c in sorted({c for s in servers for c in a[s].get("batching", {})}):
@@ -113,4 +166,31 @@ def to_markdown(a: dict) -> str:
     for c in sorted({c for s in servers for c in a[s].get("token_gaps", {})}):
         row(f"Token gap at c={c}: p99 / max (ms)",
             lambda r, c=c: f"{r['token_gaps'][c]['p99_ms']:.0f} / {r['token_gaps'][c]['max_ms']:.0f}")
+    for c in sorted({c for s in servers for c in a[s].get("gpu_util_pct", {})}):
+        row(f"GPU utilization at c={c} (nvidia-smi, run mean)", lambda r, c=c: f"{r['gpu_util_pct'][c]:.0f}%")
+    hi = max(c for s in servers for c in a[s].get("gpu_util_pct", {1: 0}))
+    row(f"c={hi}: requests still in prefill when a request arrives (mean)",
+        lambda r: f"{r['ttft_backlog_c16']['mean_requests_ahead']:.1f} "
+                  f"({r['ttft_backlog_c16']['mean_prompt_tokens_ahead']:,.0f} prompt tokens)")
+    for b in ("0", "1", "2-3", "4+"):
+        row(f"c={hi}: TTFT p50 when {b} requests are ahead in prefill (ms, n)",
+            lambda r, b=b: (f"{r['ttft_backlog_c16']['by_requests_ahead'][b]['ttft_p50_ms']:.0f} "
+                            f"(n={r['ttft_backlog_c16']['by_requests_ahead'][b]['n']})")
+            if r["ttft_backlog_c16"]["by_requests_ahead"][b]["n"] else "none")
+
+    lines += ["", "Per-request ITL modes: share of requests whose ITL is over 1.4x the fastest quartile "
+              "at that level (median ITL of the fast / slow requests in brackets).", "",
+              "| Server | Concurrency | Repeat 1 | Repeat 2 | Repeat 3 |", "|---|---|---|---|---|"]
+    for s in servers:
+        for c, m in sorted(a[s].get("itl_modes", {}).items()):
+            cells = []
+            for rep in (1, 2, 3):
+                x = m["runs"].get(rep)
+                if not x:
+                    cells.append("n/a")
+                    continue
+                fast = f"{x['fast_itl_ms']:.1f}" if x["fast_itl_ms"] else "-"
+                slow = f"{x['slow_itl_ms']:.1f}" if x["slow_itl_ms"] else "-"
+                cells.append(f"{x['slow_share']:.0%} ({fast} / {slow} ms)")
+            lines.append(f"| {({'vllm': 'vLLM', 'ollama': 'Ollama'})[s]} | {c} | " + " | ".join(cells) + " |")
     return "\n".join(lines)

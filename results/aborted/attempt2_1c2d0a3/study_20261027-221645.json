@@ -1,0 +1,222 @@
+{
+ "started_at": "2026-10-27T22:16:45-04:00",
+ "env": {
+  "git": {
+   "commit": "1c2d0a3194b497f78d6f403c4e4bed47916f1d2a",
+   "dirty": false,
+   "dirty_files": []
+  },
+  "gpu": {
+   "name": "NVIDIA GeForce RTX 3060 Laptop GPU",
+   "driver_version": "592.00",
+   "memory_total": "6144 MiB",
+   "vbios": "94.06.2b.00.55",
+   "max_sm_clock": "2100 MHz",
+   "max_mem_clock": "7001 MHz",
+   "cuda_driver_api_version": "13.1",
+   "nvidia_smi_version": "590.62"
+  },
+  "cuda_toolkit_nvcc": "Cuda compilation tools, release 13.1, V13.1.115",
+  "host": {
+   "cpu": "12th Gen Intel(R) Core(TM) i7-12700H",
+   "wsl_mem_mib": "7787",
+   "kernel": "6.6.114.1-microsoft-standard-WSL2",
+   "distro": "Ubuntu 24.04.4 LTS",
+   "windows_ver": "Microsoft Windows [Version 10.0.26300.9711]",
+   "power_plan": "Turbo"
+  },
+  "python": "3.12.3",
+  "packages": {
+   "vllm": "0.32.0",
+   "torch": "2.13.0",
+   "transformers": "5.19.0",
+   "aiohttp": "3.14.5",
+   "flashinfer-python": "0.7.0.post1",
+   "triton": "3.7.1"
+  },
+  "torch_cuda_runtime": "13.0"
+ },
+ "config": {
+  "levels": [
+   1,
+   2,
+   4,
+   8,
+   16
+  ],
+  "schedule": [
+   [
+    "vllm",
+    [
+     1
+    ]
+   ],
+   [
+    "ollama",
+    [
+     1,
+     2
+    ]
+   ],
+   [
+    "vllm",
+    [
+     2,
+     3
+    ]
+   ],
+   [
+    "ollama",
+    [
+     3
+    ]
+   ]
+  ],
+  "max_tokens": 256,
+  "seed": 20261027,
+  "requests_per_run": {
+   "1": 16,
+   "2": 16,
+   "4": 32,
+   "8": 64,
+   "16": 128
+  },
+  "warmup_seconds_per_launch": 30,
+  "per_level_warmup": "one wave of c requests",
+  "sampling": {
+   "temperature": 0.0,
+   "top_p": 1.0,
+   "frequency_penalty": 0.0,
+   "presence_penalty": 0.0
+  },
+  "prompt_file": "data/prompts.jsonl",
+  "prompt_sha256": "757f4a3b2913af7128761f4a0ead31ba84be1fc2ca0038f2b8825b2026f09974",
+  "n_prompts": 64,
+  "servers": {
+   "vllm": {
+    "script": "scripts/serve_vllm.sh",
+    "base_url": "http://127.0.0.1:8000",
+    "model": "qwen2.5-1.5b-instruct",
+    "ready": "/v1/models"
+   },
+   "ollama": {
+    "script": "scripts/serve_ollama.sh",
+    "base_url": "http://127.0.0.1:11435",
+    "model": "qwen2.5-1.5b-bench",
+    "ready": "/api/version"
+   }
+  }
+ },
+ "blocks": [
+  {
+   "block": 0,
+   "server": "vllm",
+   "repeats": [
+    1
+   ],
+   "baseline_gpu": {
+    "n_samples": 22,
+    "mem_used_mib_max": 374.0,
+    "mem_used_mib_min": 374.0,
+    "mem_total_mib": 6144.0,
+    "util_pct_mean": 19.0,
+    "sm_clock_mhz_mean_busy": null,
+    "sm_clock_mhz_min_busy": null,
+    "temp_c_max": 53.0,
+    "power_w_mean": 14.558636363636365,
+    "clock_event_reasons_seen": [
+     "0x0000000000000001"
+    ]
+   },
+   "power_plan": "Turbo",
+   "launch_script": "#!/usr/bin/env bash\n# vLLM OpenAI-compatible server used by bench/study.py. Each result file stores this script.\n#   --dtype float16            the checkpoint is BF16; FP16 matches Ollama's F16 GGUF\n#   --max-model-len 2048       same per-request context as Ollama's OLLAMA_CONTEXT_LENGTH\n#   --max-num-seqs 16          at most 16 sequences in a batch, same as OLLAMA_NUM_PARALLEL\n#   --generation-config vllm   ignore the checkpoint's sampling defaults (repetition_penalty 1.1)\n#   prefix caching stays at vLLM's default; the client's per-request tag defeats it on both servers\nset -euo pipefail\nexport HF_HUB_DISABLE_TELEMETRY=1 VLLM_NO_USAGE_STATS=1 DO_NOT_TRACK=1 HF_HUB_OFFLINE=1\nexec \"$HOME/llmbench/venv/bin/vllm\" serve Qwen/Qwen2.5-1.5B-Instruct \\\n  --revision 989aa7980e4cf806f80c7fef2b1adb7bc71aa306 \\\n  --served-model-name qwen2.5-1.5b-instruct \\\n  --dtype float16 \\\n  --max-model-len 2048 \\\n  --max-num-seqs 16 \\\n  --gpu-memory-utilization 0.80 \\\n  --generation-config vllm \\\n  --seed 0 \\\n  --disable-uvicorn-access-log \\\n  --host 127.0.0.1 --port 8000\n",
+   "ready_s": 54.097136393,
+   "idle_loaded_gpu": {
+    "n_samples": 21,
+    "mem_used_mib_max": 5260.0,
+    "mem_used_mib_min": 5260.0,
+    "mem_total_mib": 6144.0,
+    "util_pct_mean": 27.19047619047619,
+    "sm_clock_mhz_mean_busy": null,
+    "sm_clock_mhz_min_busy": null,
+    "temp_c_max": 52.0,
+    "power_w_mean": 14.445714285714287,
+    "clock_event_reasons_seen": [
+     "0x0000000000000001"
+    ]
+   },
+   "details": {
+    "version": "0.32.0",
+    "models": {
+     "object": "list",
+     "data": [
+      {
+       "id": "qwen2.5-1.5b-instruct",
+       "object": "model",
+       "created": 1793153865,
+       "owned_by": "vllm",
+       "root": "Qwen/Qwen2.5-1.5B-Instruct",
+       "parent": null,
+       "max_model_len": 2048,
+       "permission": [
+        {
+         "id": "modelperm-99b9a81cba20ac9c",
+         "object": "model_permission",
+         "created": 1793153865,
+         "allow_create_engine": false,
+         "allow_sampling": true,
+         "allow_logprobs": true,
+         "allow_search_indices": false,
+         "allow_view": true,
+         "allow_fine_tuning": false,
+         "organization": "*",
+         "group": null,
+         "is_blocking": false
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "warmup": {
+    "seconds": 30.657060725999997,
+    "requests": 96
+   },
+   "log_highlights": [
+    "(APIServer pid=755) INFO 10-27 22:17:01 [api_utils.py:286] non-default args: {'model_tag': 'Qwen/Qwen2.5-1.5B-Instruct', 'host': '127.0.0.1', 'disable_uvicorn_access_log': True, 'model': 'Qwen/Qwen2.5-1.5B-Instruct', 'dtype': 'float16', 'revision': '989aa7980e4cf806f80c7fef2b1adb7bc71aa306', 'max_model_len': 2048, 'served_model_name': ['qwen2.5-1.5b-instruct'], 'generation_config': 'vllm', 'gpu_me",
+    "(EngineCore pid=815) INFO 10-27 22:17:15 [cuda.py:506] Using FLASH_ATTN attention backend out of potential backends: ['FLASH_ATTN', 'FLASHINFER', 'TRITON_ATTN', 'FLEX_ATTENTION'].",
+    "(EngineCore pid=815) INFO 10-27 22:17:19 [default_loader.py:501] Loading weights took 3.38 seconds",
+    "(EngineCore pid=815) INFO 10-27 22:17:23 [model_runner.py:424] Model loading took 2.98 GiB memory and 9.480031 seconds",
+    "(EngineCore pid=815) INFO 10-27 22:17:23 [utils.py:347] Using LBNHC KV cache layout.",
+    "(EngineCore pid=815) INFO 10-27 22:17:27 [decorators.py:319] [backbone] Directly load AOT compilation from path /home/karthik/.cache/vllm/torch_compile_cache/torch_aot_compile/a4bb1a1a7f8bb0c0ef1188df90694292c9d8fd3c425bab0235c51e22708bfcd3/rank_0_0/model",
+    "(EngineCore pid=815) INFO 10-27 22:17:27 [monitor.py:62] [backbone] torch.compile took 1.90 s in total",
+    "(EngineCore pid=815) INFO 10-27 22:17:31 [model_runner.py:1127] Graph capturing finished in 1 secs, took 0.08 GiB",
+    "(EngineCore pid=815) INFO 10-27 22:17:31 [gpu_worker.py:759] Available KV cache memory: 1.5 GiB",
+    "(EngineCore pid=815) INFO 10-27 22:17:31 [gpu_worker.py:774] CUDA graph memory profiling is enabled (default since v0.21.0). The current --gpu-memory-utilization=0.8000 is equivalent to --gpu-memory-utilization=0.7847 without CUDA graph memory profiling. To maintain the same effective KV cache size as before, increase --gpu-memory-utilization to 0.8153. To disable, set VLLM_MEMORY_PROFILER_ESTIMAT",
+    "(EngineCore pid=815) INFO 10-27 22:17:31 [kv_cache_utils.py:2327] GPU KV cache size: 56,048 tokens, Maximum concurrency for 2,048 tokens per request: 27.37x",
+    "(EngineCore pid=815) INFO 10-27 22:17:33 [model_runner.py:1127] Graph capturing finished in 1 secs, took 0.05 GiB",
+    "(APIServer pid=755) INFO 10-27 22:17:51 [loggers.py:335] Engine 000: Avg prompt throughput: 790.4 tokens/s, Avg generation throughput: 287.8 tokens/s, Running: 0 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.0%, Prefix cache hit rate: 0.0%",
+    "(APIServer pid=755) INFO 10-27 22:18:01 [loggers.py:335] Engine 000: Avg prompt throughput: 2223.2 tokens/s, Avg generation throughput: 819.1 tokens/s, Running: 0 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.0%, Prefix cache hit rate: 0.0%",
+    "(APIServer pid=755) INFO 10-27 22:18:11 [loggers.py:335] Engine 000: Avg prompt throughput: 2252.5 tokens/s, Avg generation throughput: 819.1 tokens/s, Running: 0 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.0%, Prefix cache hit rate: 0.0%",
+    "(APIServer pid=755) INFO 10-27 22:18:21 [loggers.py:335] Engine 000: Avg prompt throughput: 2020.0 tokens/s, Avg generation throughput: 614.8 tokens/s, Running: 8 reqs, Waiting: 0 reqs, GPU KV cache usage: 9.6%, Prefix cache hit rate: 0.0%",
+    "(APIServer pid=755) INFO 10-27 22:18:31 [loggers.py:335] Engine 000: Avg prompt throughput: 1443.0 tokens/s, Avg generation throughput: 512.0 tokens/s, Running: 8 reqs, Waiting: 0 reqs, GPU KV cache usage: 13.2%, Prefix cache hit rate: 0.0%",
+    "(APIServer pid=755) INFO 10-27 22:18:41 [loggers.py:335] Engine 000: Avg prompt throughput: 1072.1 tokens/s, Avg generation throughput: 511.3 tokens/s, Running: 4 reqs, Waiting: 0 reqs, GPU KV cache usage: 6.0%, Prefix cache hit rate: 0.0%",
+    "(APIServer pid=755) INFO 10-27 22:18:51 [loggers.py:335] Engine 000: Avg prompt throughput: 1657.7 tokens/s, Avg generation throughput: 455.8 tokens/s, Running: 8 reqs, Waiting: 0 reqs, GPU KV cache usage: 9.8%, Prefix cache hit rate: 0.0%",
+    "(APIServer pid=755) INFO 10-27 22:19:01 [loggers.py:335] Engine 000: Avg prompt throughput: 461.0 tokens/s, Avg generation throughput: 261.2 tokens/s, Running: 4 reqs, Waiting: 0 reqs, GPU KV cache usage: 5.9%, Prefix cache hit rate: 0.0%",
+    "(APIServer pid=755) INFO 10-27 22:19:11 [loggers.py:335] Engine 000: Avg prompt throughput: 757.6 tokens/s, Avg generation throughput: 281.7 tokens/s, Running: 4 reqs, Waiting: 0 reqs, GPU KV cache usage: 6.5%, Prefix cache hit rate: 0.0%",
+    "(APIServer pid=755) INFO 10-27 22:19:21 [loggers.py:335] Engine 000: Avg prompt throughput: 878.1 tokens/s, Avg generation throughput: 272.4 tokens/s, Running: 4 reqs, Waiting: 0 reqs, GPU KV cache usage: 6.7%, Prefix cache hit rate: 0.0%",
+    "(APIServer pid=755) INFO 10-27 22:19:31 [loggers.py:335] Engine 000: Avg prompt throughput: 485.1 tokens/s, Avg generation throughput: 264.9 tokens/s, Running: 0 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.0%, Prefix cache hit rate: 0.0%",
+    "(APIServer pid=755) INFO 10-27 22:19:41 [loggers.py:335] Engine 000: Avg prompt throughput: 422.4 tokens/s, Avg generation throughput: 102.4 tokens/s, Running: 0 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.0%, Prefix cache hit rate: 0.0%",
+    "(APIServer pid=755) INFO 10-27 22:19:51 [loggers.py:335] Engine 000: Avg prompt throughput: 382.7 tokens/s, Avg generation throughput: 152.1 tokens/s, Running: 2 reqs, Waiting: 0 reqs, GPU KV cache usage: 3.7%, Prefix cache hit rate: 0.0%",
+    "(APIServer pid=755) INFO 10-27 22:20:01 [loggers.py:335] Engine 000: Avg prompt throughput: 439.9 tokens/s, Avg generation throughput: 148.4 tokens/s, Running: 2 reqs, Waiting: 0 reqs, GPU KV cache usage: 3.6%, Prefix cache hit rate: 0.0%",
+    "(APIServer pid=755) INFO 10-27 22:20:11 [loggers.py:335] Engine 000: Avg prompt throughput: 1222.3 tokens/s, Avg generation throughput: 196.9 tokens/s, Running: 16 reqs, Waiting: 0 reqs, GPU KV cache usage: 22.9%, Prefix cache hit rate: 0.0%",
+    "(APIServer pid=755) INFO 10-27 22:20:21 [loggers.py:335] Engine 000: Avg prompt throughput: 2241.5 tokens/s, Avg generation throughput: 714.5 tokens/s, Running: 16 reqs, Waiting: 0 reqs, GPU KV cache usage: 20.7%, Prefix cache hit rate: 0.0%",
+    "(APIServer pid=755) INFO 10-27 22:20:31 [loggers.py:335] Engine 000: Avg prompt throughput: 1621.9 tokens/s, Avg generation throughput: 785.7 tokens/s, Running: 11 reqs, Waiting: 0 reqs, GPU KV cache usage: 15.6%, Prefix cache hit rate: 0.0%",
+    "(APIServer pid=755) INFO 10-27 22:20:41 [loggers.py:335] Engine 000: Avg prompt throughput: 1780.4 tokens/s, Avg generation throughput: 815.3 tokens/s, Running: 12 reqs, Waiting: 0 reqs, GPU KV cache usage: 19.7%, Prefix cache hit rate: 0.0%",
+    "(APIServer pid=755) INFO 10-27 22:20:51 [loggers.py:335] Engine 000: Avg prompt throughput: 2197.7 tokens/s, Avg generation throughput: 749.1 tokens/s, Running: 16 reqs, Waiting: 0 reqs, GPU KV cache usage: 26.1%, Prefix cache hit rate: 0.0%"
+   ],
+   "gpu_after_stop_mib": 359.0
+  }
+ ],
+ "finished_at": "2026-10-27T22:20:56-04:00"
+}

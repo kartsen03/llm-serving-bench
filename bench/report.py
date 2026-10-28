@@ -12,7 +12,7 @@ import statistics
 from collections import defaultdict
 from pathlib import Path
 
-from bench import analysis
+from bench import analysis, ollama_slots
 
 SERVER_LABEL = {"vllm": "vLLM", "ollama": "Ollama"}
 # Reference categorical palette, slots 1-2, light surface (validated in the dataviz skill).
@@ -33,6 +33,10 @@ METRICS = {  # name -> how to read it from one run file
     "peak_mem_mib": lambda r: r["gpu"]["mem_used_mib_max"],
     "sm_mhz_busy": lambda r: r["gpu"]["sm_clock_mhz_mean_busy"],
     "temp_c_max": lambda r: r["gpu"]["temp_c_max"],
+    "gpu_util_pct": lambda r: r["gpu"]["util_pct_mean"],
+    "ram_avail_mib": lambda r: (r.get("host_mem") or {}).get("MemAvailable_mib"),
+    "swap_used_mib": lambda r: (r["host_mem"]["SwapTotal_mib"] - r["host_mem"]["SwapFree_mib"]
+                                if r.get("host_mem") else None),
     "errors": lambda r: r["summary"]["n_errors"],
     "baseline_mib": lambda r: r["server_info"]["baseline_gpu"]["mem_used_mib_max"],
     "idle_loaded_mib": lambda r: r["server_info"]["idle_loaded_gpu"]["mem_used_mib_max"],
@@ -132,8 +136,9 @@ def table(agg: dict) -> str:
             ("e2e_p50_s", "E2E p50 (s)", 2)]
     hw = [("mean_out_tokens", "Mean output tokens", 0), ("length_frac", "Share hitting 256", 2),
           ("peak_mem_mib", "Peak GPU mem (MiB)", 0), ("baseline_mib", "Idle baseline (MiB)", 0),
-          ("sm_mhz_busy", "SM clock busy (MHz)", 0), ("temp_c_max", "Max temp (C)", 0),
-          ("errors", "Errors", 0)]
+          ("gpu_util_pct", "GPU util (%)", 0), ("sm_mhz_busy", "SM clock busy (MHz)", 0),
+          ("temp_c_max", "Max temp (C)", 0), ("ram_avail_mib", "WSL RAM free (MiB)", 0),
+          ("swap_used_mib", "Swap used (MiB)", 0), ("errors", "Errors", 0)]
     return ("### Throughput and latency (median of 3 runs; ranges are min–max)\n\n"
             + _md_table(agg, perf, ("out_tok_s", "ttft_p50_ms", "itl_p50_ms"))
             + "\n\n### Output length, memory and clocks (median of 3 runs)\n\n"
@@ -142,16 +147,17 @@ def table(agg: dict) -> str:
 
 
 def comparison(agg: dict) -> str:
-    rows = ["| Concurrency | Throughput vLLM/Ollama | TTFT p50 vLLM/Ollama | ITL p50 vLLM/Ollama |",
-            "|---|---|---|---|"]
+    rows = ["| Concurrency | Throughput vLLM/Ollama | Throughput vLLM median / Ollama best repeat "
+            "| TTFT p50 vLLM/Ollama | ITL p50 vLLM/Ollama |", "|---|---|---|---|---|"]
     for c in sorted({e["concurrency"] for e in agg.values()}):
         v, o = agg.get(f"vllm_c{c}"), agg.get(f"ollama_c{c}")
         if not (v and o):
             continue
-        def r(key):
-            a, b = v[key]["median"], o[key]["median"]
+        def r(key, ostat="median"):
+            a, b = v[key]["median"], o[key][ostat]
             return f"{a / b:.2f}x" if a and b else "n/a"
-        rows.append(f"| {c} | {r('out_tok_s')} | {r('ttft_p50_ms')} | {r('itl_p50_ms')} |")
+        rows.append(f"| {c} | {r('out_tok_s')} | {r('out_tok_s', 'max')} | {r('ttft_p50_ms')} "
+                    f"| {r('itl_p50_ms')} |")
     return ("\n".join(rows)
             + "\n\nThroughput above 1 favours vLLM; TTFT and ITL below 1 favour vLLM.")
 
@@ -251,6 +257,24 @@ def fidelity_markdown(fid: dict, mech: dict) -> str:
             f"identical first 60 characters: {fid['identical_first_60_chars_frac']:.0%}.")
 
 
+def startup_markdown(runs: list[dict]) -> str:
+    """One row per server launch: time until the API answered, weight load, and GPU memory."""
+    blocks = {}
+    for r in runs:
+        si = r["server_info"]
+        blocks[si["block"]] = si
+    rows = ["| Launch | Server | Repeats | API ready (s) | First model load (s) | GPU mem idle before (MiB) "
+            "| GPU mem loaded, idle (MiB) |", "|---|---|---|---|---|---|---|"]
+    for b, si in sorted(blocks.items()):
+        load = si.get("model_load_s")
+        rows.append(f"| {b} | {SERVER_LABEL[si['server']]} | {', '.join(map(str, si['repeats']))} "
+                    f"| {si['ready_s']:.0f} | {fmt(load, 0) if load else 'in API ready'} "
+                    f"| {fmt(si['baseline_gpu']['mem_used_mib_max'])} "
+                    f"| {fmt(si['idle_loaded_gpu']['mem_used_mib_max'])} |")
+    return "\n".join(rows) + ("\n\nvLLM loads the weights, compiles and captures CUDA graphs before its API "
+                              "answers; Ollama's API answers first and loads the model on the first request.")
+
+
 def inject_readme(readme: Path, blocks: dict[str, str]) -> None:
     """Replaces the text between <!-- name:start --> and <!-- name:end --> with generated content,
     so the README's numbers are always the ones computed from the run files."""
@@ -283,11 +307,15 @@ def main() -> None:
     (args.results / "results_table.md").write_text(table(agg) + "\n", encoding="utf-8")
     (args.results / "analysis.md").write_text(analysis.to_markdown(mech) + "\n", encoding="utf-8")
     (args.results / "resume_numbers.txt").write_text(resume_block(agg, prov) + "\n", encoding="utf-8")
+    if "ollama" in mech:
+        slot_md = ollama_slots.slot_modes(args.results, mech["ollama"]["itl_modes"])
+        (args.results / "ollama_slot_modes.md").write_text(slot_md + "\n", encoding="utf-8")
     plot(agg, args.results)
     inject_readme(args.results.parent / "README.md", {
         "results": table(agg),
         "analysis": analysis.to_markdown(mech),
         "fidelity": fidelity_markdown(fid, mech),
+        "startup": startup_markdown(runs),
         "resume": "```text\n" + resume_block(agg, prov) + "\n```",
     })
     print(table(agg))

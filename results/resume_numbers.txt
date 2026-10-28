@@ -1,0 +1,17 @@
+Model / precision: Qwen2.5-1.5B-Instruct, FP16 weights and FP16 KV cache on both servers
+  (vLLM: HF safetensors cast BF16->FP16; Ollama: qwen2.5:1.5b-instruct-fp16 GGUF)
+Workload: 64 seeded prompts, greedy, max 256 output tokens, concurrency 1-16, median of 3 runs
+
+            tok/s @1    TTFT @1  tok/s @16    TTFT @16  peak GPU mem
+vLLM            86.4     128 ms        754      684 ms     5,494 MiB
+Ollama          72.1     131 ms        453      400 ms     4,530 MiB
+
+Throughput ratio vLLM/Ollama: 1.20x at concurrency 1, 1.66x at 16
+Peak GPU memory is device-wide memory.used from nvidia-smi (WSL2 has no per-process view) and
+  includes the Windows desktop's 359 MiB idle baseline. vLLM pre-reserves
+  --gpu-memory-utilization 0.80 of VRAM, so its number is a reservation, not what it needed.
+
+GPU: NVIDIA GeForce RTX 3060 Laptop GPU (6144 MiB), driver 592.00, CUDA 13.1 (driver API)
+vLLM 0.32.0 (torch 2.13.0, CUDA runtime 13.0); Ollama 0.40.12
+WSL2 Ubuntu 24.04.4 LTS, kernel 6.6.114.1-microsoft-standard-WSL2; Microsoft Windows [Version 10.0.26300.9711]; power plan Turbo
+Benchmark commit 8156fd555628

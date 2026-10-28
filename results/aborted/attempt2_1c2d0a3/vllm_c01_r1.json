@@ -1,0 +1,518 @@
+{
+ "schema": 1,
+ "server": "vllm",
+ "concurrency": 1,
+ "repeat": 1,
+ "block": 0,
+ "position": 5,
+ "n_requests": 16,
+ "power_plan_at_start": "Turbo",
+ "config": {
+  "levels": [
+   1,
+   2,
+   4,
+   8,
+   16
+  ],
+  "schedule": [
+   [
+    "vllm",
+    [
+     1
+    ]
+   ],
+   [
+    "ollama",
+    [
+     1,
+     2
+    ]
+   ],
+   [
+    "vllm",
+    [
+     2,
+     3
+    ]
+   ],
+   [
+    "ollama",
+    [
+     3
+    ]
+   ]
+  ],
+  "max_tokens": 256,
+  "seed": 20261027,
+  "requests_per_run": {
+   "1": 16,
+   "2": 16,
+   "4": 32,
+   "8": 64,
+   "16": 128
+  },
+  "warmup_seconds_per_launch": 30,
+  "per_level_warmup": "one wave of c requests",
+  "sampling": {
+   "temperature": 0.0,
+   "top_p": 1.0,
+   "frequency_penalty": 0.0,
+   "presence_penalty": 0.0
+  },
+  "prompt_file": "data/prompts.jsonl",
+  "prompt_sha256": "757f4a3b2913af7128761f4a0ead31ba84be1fc2ca0038f2b8825b2026f09974",
+  "n_prompts": 64,
+  "servers": {
+   "vllm": {
+    "script": "scripts/serve_vllm.sh",
+    "base_url": "http://127.0.0.1:8000",
+    "model": "qwen2.5-1.5b-instruct",
+    "ready": "/v1/models"
+   },
+   "ollama": {
+    "script": "scripts/serve_ollama.sh",
+    "base_url": "http://127.0.0.1:11435",
+    "model": "qwen2.5-1.5b-bench",
+    "ready": "/api/version"
+   }
+  }
+ },
+ "env": {
+  "git": {
+   "commit": "1c2d0a3194b497f78d6f403c4e4bed47916f1d2a",
+   "dirty": false,
+   "dirty_files": []
+  },
+  "gpu": {
+   "name": "NVIDIA GeForce RTX 3060 Laptop GPU",
+   "driver_version": "592.00",
+   "memory_total": "6144 MiB",
+   "vbios": "94.06.2b.00.55",
+   "max_sm_clock": "2100 MHz",
+   "max_mem_clock": "7001 MHz",
+   "cuda_driver_api_version": "13.1",
+   "nvidia_smi_version": "590.62"
+  },
+  "cuda_toolkit_nvcc": "Cuda compilation tools, release 13.1, V13.1.115",
+  "host": {
+   "cpu": "12th Gen Intel(R) Core(TM) i7-12700H",
+   "wsl_mem_mib": "7787",
+   "kernel": "6.6.114.1-microsoft-standard-WSL2",
+   "distro": "Ubuntu 24.04.4 LTS",
+   "windows_ver": "Microsoft Windows [Version 10.0.26300.9711]",
+   "power_plan": "Turbo"
+  },
+  "python": "3.12.3",
+  "packages": {
+   "vllm": "0.32.0",
+   "torch": "2.13.0",
+   "transformers": "5.19.0",
+   "aiohttp": "3.14.5",
+   "flashinfer-python": "0.7.0.post1",
+   "triton": "3.7.1"
+  },
+  "torch_cuda_runtime": "13.0"
+ },
+ "server_info": {
+  "block": 0,
+  "server": "vllm",
+  "repeats": [
+   1
+  ],
+  "baseline_gpu": {
+   "n_samples": 22,
+   "mem_used_mib_max": 374.0,
+   "mem_used_mib_min": 374.0,
+   "mem_total_mib": 6144.0,
+   "util_pct_mean": 19.0,
+   "sm_clock_mhz_mean_busy": null,
+   "sm_clock_mhz_min_busy": null,
+   "temp_c_max": 53.0,
+   "power_w_mean": 14.558636363636365,
+   "clock_event_reasons_seen": [
+    "0x0000000000000001"
+   ]
+  },
+  "power_plan": "Turbo",
+  "launch_script": "#!/usr/bin/env bash\n# vLLM OpenAI-compatible server used by bench/study.py. Each result file stores this script.\n#   --dtype float16            the checkpoint is BF16; FP16 matches Ollama's F16 GGUF\n#   --max-model-len 2048       same per-request context as Ollama's OLLAMA_CONTEXT_LENGTH\n#   --max-num-seqs 16          at most 16 sequences in a batch, same as OLLAMA_NUM_PARALLEL\n#   --generation-config vllm   ignore the checkpoint's sampling defaults (repetition_penalty 1.1)\n#   prefix caching stays at vLLM's default; the client's per-request tag defeats it on both servers\nset -euo pipefail\nexport HF_HUB_DISABLE_TELEMETRY=1 VLLM_NO_USAGE_STATS=1 DO_NOT_TRACK=1 HF_HUB_OFFLINE=1\nexec \"$HOME/llmbench/venv/bin/vllm\" serve Qwen/Qwen2.5-1.5B-Instruct \\\n  --revision 989aa7980e4cf806f80c7fef2b1adb7bc71aa306 \\\n  --served-model-name qwen2.5-1.5b-instruct \\\n  --dtype float16 \\\n  --max-model-len 2048 \\\n  --max-num-seqs 16 \\\n  --gpu-memory-utilization 0.80 \\\n  --generation-config vllm \\\n  --seed 0 \\\n  --disable-uvicorn-access-log \\\n  --host 127.0.0.1 --port 8000\n",
+  "ready_s": 54.097136393,
+  "idle_loaded_gpu": {
+   "n_samples": 21,
+   "mem_used_mib_max": 5260.0,
+   "mem_used_mib_min": 5260.0,
+   "mem_total_mib": 6144.0,
+   "util_pct_mean": 27.19047619047619,
+   "sm_clock_mhz_mean_busy": null,
+   "sm_clock_mhz_min_busy": null,
+   "temp_c_max": 52.0,
+   "power_w_mean": 14.445714285714287,
+   "clock_event_reasons_seen": [
+    "0x0000000000000001"
+   ]
+  },
+  "details": {
+   "version": "0.32.0",
+   "models": {
+    "object": "list",
+    "data": [
+     {
+      "id": "qwen2.5-1.5b-instruct",
+      "object": "model",
+      "created": 1793153865,
+      "owned_by": "vllm",
+      "root": "Qwen/Qwen2.5-1.5B-Instruct",
+      "parent": null,
+      "max_model_len": 2048,
+      "permission": [
+       {
+        "id": "modelperm-99b9a81cba20ac9c",
+        "object": "model_permission",
+        "created": 1793153865,
+        "allow_create_engine": false,
+        "allow_sampling": true,
+        "allow_logprobs": true,
+        "allow_search_indices": false,
+        "allow_view": true,
+        "allow_fine_tuning": false,
+        "organization": "*",
+        "group": null,
+        "is_blocking": false
+       }
+      ]
+     }
+    ]
+   }
+  },
+  "warmup": {
+   "seconds": 30.657060725999997,
+   "requests": 96
+  }
+ },
+ "started_at": "2026-10-27T22:20:55-04:00",
+ "summary": {
+  "n_requests": 16,
+  "n_ok": 0,
+  "n_errors": 16,
+  "errors": [
+   "ClientConnectorError: Cannot connect to host 127.0.0.1:8000 ssl:default [Connect call failed ('127.0.0.1', 8000)]"
+  ],
+  "wall_s": 0.006045136000011553,
+  "output_tokens": 0,
+  "prompt_tokens": 0,
+  "missing_usage": 0,
+  "content_chunks": 0,
+  "tokens_per_chunk": null,
+  "finish_length_frac": null,
+  "output_tok_per_s": 0.0,
+  "requests_per_s": 0.0,
+  "ttft_s": {
+   "p50": null,
+   "p90": null,
+   "p99": null,
+   "mean": null
+  },
+  "itl_s": {
+   "p50": null,
+   "p90": null,
+   "mean": null
+  },
+  "chunk_gap_s": {
+   "p50": null,
+   "p90": null,
+   "p99": null,
+   "max": null
+  },
+  "e2e_s": {
+   "p50": null,
+   "p90": null
+  }
+ },
+ "gpu": {
+  "n_samples": 0,
+  "mem_used_mib_max": null,
+  "mem_used_mib_min": null,
+  "mem_total_mib": null,
+  "util_pct_mean": null,
+  "sm_clock_mhz_mean_busy": null,
+  "sm_clock_mhz_min_busy": null,
+  "temp_c_max": null,
+  "power_w_mean": null,
+  "clock_event_reasons_seen": []
+ },
+ "gpu_samples": [],
+ "requests": [
+  {
+   "index": 0,
+   "prompt_id": 0,
+   "tag": "r1c01i000",
+   "ok": false,
+   "error": "ClientConnectorError: Cannot connect to host 127.0.0.1:8000 ssl:default [Connect call failed ('127.0.0.1', 8000)]",
+   "t_send": 3.254900002502836e-05,
+   "ttft": null,
+   "e2e": null,
+   "chunk_offsets": [],
+   "prompt_tokens": null,
+   "completion_tokens": null,
+   "finish_reason": null,
+   "text_sha1": null,
+   "text_head": null,
+   "itl": null
+  },
+  {
+   "index": 1,
+   "prompt_id": 1,
+   "tag": "r1c01i001",
+   "ok": false,
+   "error": "ClientConnectorError: Cannot connect to host 127.0.0.1:8000 ssl:default [Connect call failed ('127.0.0.1', 8000)]",
+   "t_send": 0.00048705300002893637,
+   "ttft": null,
+   "e2e": null,
+   "chunk_offsets": [],
+   "prompt_tokens": null,
+   "completion_tokens": null,
+   "finish_reason": null,
+   "text_sha1": null,
+   "text_head": null,
+   "itl": null
+  },
+  {
+   "index": 2,
+   "prompt_id": 2,
+   "tag": "r1c01i002",
+   "ok": false,
+   "error": "ClientConnectorError: Cannot connect to host 127.0.0.1:8000 ssl:default [Connect call failed ('127.0.0.1', 8000)]",
+   "t_send": 0.0008549940000079914,
+   "ttft": null,
+   "e2e": null,
+   "chunk_offsets": [],
+   "prompt_tokens": null,
+   "completion_tokens": null,
+   "finish_reason": null,
+   "text_sha1": null,
+   "text_head": null,
+   "itl": null
+  },
+  {
+   "index": 3,
+   "prompt_id": 3,
+   "tag": "r1c01i003",
+   "ok": false,
+   "error": "ClientConnectorError: Cannot connect to host 127.0.0.1:8000 ssl:default [Connect call failed ('127.0.0.1', 8000)]",
+   "t_send": 0.0011247610000282293,
+   "ttft": null,
+   "e2e": null,
+   "chunk_offsets": [],
+   "prompt_tokens": null,
+   "completion_tokens": null,
+   "finish_reason": null,
+   "text_sha1": null,
+   "text_head": null,
+   "itl": null
+  },
+  {
+   "index": 4,
+   "prompt_id": 4,
+   "tag": "r1c01i004",
+   "ok": false,
+   "error": "ClientConnectorError: Cannot connect to host 127.0.0.1:8000 ssl:default [Connect call failed ('127.0.0.1', 8000)]",
+   "t_send": 0.0014683219999938046,
+   "ttft": null,
+   "e2e": null,
+   "chunk_offsets": [],
+   "prompt_tokens": null,
+   "completion_tokens": null,
+   "finish_reason": null,
+   "text_sha1": null,
+   "text_head": null,
+   "itl": null
+  },
+  {
+   "index": 5,
+   "prompt_id": 5,
+   "tag": "r1c01i005",
+   "ok": false,
+   "error": "ClientConnectorError: Cannot connect to host 127.0.0.1:8000 ssl:default [Connect call failed ('127.0.0.1', 8000)]",
+   "t_send": 0.0018206860000304914,
+   "ttft": null,
+   "e2e": null,
+   "chunk_offsets": [],
+   "prompt_tokens": null,
+   "completion_tokens": null,
+   "finish_reason": null,
+   "text_sha1": null,
+   "text_head": null,
+   "itl": null
+  },
+  {
+   "index": 6,
+   "prompt_id": 6,
+   "tag": "r1c01i006",
+   "ok": false,
+   "error": "ClientConnectorError: Cannot connect to host 127.0.0.1:8000 ssl:default [Connect call failed ('127.0.0.1', 8000)]",
+   "t_send": 0.0023776329999805057,
+   "ttft": null,
+   "e2e": null,
+   "chunk_offsets": [],
+   "prompt_tokens": null,
+   "completion_tokens": null,
+   "finish_reason": null,
+   "text_sha1": null,
+   "text_head": null,
+   "itl": null
+  },
+  {
+   "index": 7,
+   "prompt_id": 7,
+   "tag": "r1c01i007",
+   "ok": false,
+   "error": "ClientConnectorError: Cannot connect to host 127.0.0.1:8000 ssl:default [Connect call failed ('127.0.0.1', 8000)]",
+   "t_send": 0.0032106699999872035,
+   "ttft": null,
+   "e2e": null,
+   "chunk_offsets": [],
+   "prompt_tokens": null,
+   "completion_tokens": null,
+   "finish_reason": null,
+   "text_sha1": null,
+   "text_head": null,
+   "itl": null
+  },
+  {
+   "index": 8,
+   "prompt_id": 8,
+   "tag": "r1c01i008",
+   "ok": false,
+   "error": "ClientConnectorError: Cannot connect to host 127.0.0.1:8000 ssl:default [Connect call failed ('127.0.0.1', 8000)]",
+   "t_send": 0.0035386569999786843,
+   "ttft": null,
+   "e2e": null,
+   "chunk_offsets": [],
+   "prompt_tokens": null,
+   "completion_tokens": null,
+   "finish_reason": null,
+   "text_sha1": null,
+   "text_head": null,
+   "itl": null
+  },
+  {
+   "index": 9,
+   "prompt_id": 9,
+   "tag": "r1c01i009",
+   "ok": false,
+   "error": "ClientConnectorError: Cannot connect to host 127.0.0.1:8000 ssl:default [Connect call failed ('127.0.0.1', 8000)]",
+   "t_send": 0.0038524120000147377,
+   "ttft": null,
+   "e2e": null,
+   "chunk_offsets": [],
+   "prompt_tokens": null,
+   "completion_tokens": null,
+   "finish_reason": null,
+   "text_sha1": null,
+   "text_head": null,
+   "itl": null
+  },
+  {
+   "index": 10,
+   "prompt_id": 10,
+   "tag": "r1c01i010",
+   "ok": false,
+   "error": "ClientConnectorError: Cannot connect to host 127.0.0.1:8000 ssl:default [Connect call failed ('127.0.0.1', 8000)]",
+   "t_send": 0.004419202999997651,
+   "ttft": null,
+   "e2e": null,
+   "chunk_offsets": [],
+   "prompt_tokens": null,
+   "completion_tokens": null,
+   "finish_reason": null,
+   "text_sha1": null,
+   "text_head": null,
+   "itl": null
+  },
+  {
+   "index": 11,
+   "prompt_id": 11,
+   "tag": "r1c01i011",
+   "ok": false,
+   "error": "ClientConnectorError: Cannot connect to host 127.0.0.1:8000 ssl:default [Connect call failed ('127.0.0.1', 8000)]",
+   "t_send": 0.004689949000010074,
+   "ttft": null,
+   "e2e": null,
+   "chunk_offsets": [],
+   "prompt_tokens": null,
+   "completion_tokens": null,
+   "finish_reason": null,
+   "text_sha1": null,
+   "text_head": null,
+   "itl": null
+  },
+  {
+   "index": 12,
+   "prompt_id": 12,
+   "tag": "r1c01i012",
+   "ok": false,
+   "error": "ClientConnectorError: Cannot connect to host 127.0.0.1:8000 ssl:default [Connect call failed ('127.0.0.1', 8000)]",
+   "t_send": 0.004879178000010143,
+   "ttft": null,
+   "e2e": null,
+   "chunk_offsets": [],
+   "prompt_tokens": null,
+   "completion_tokens": null,
+   "finish_reason": null,
+   "text_sha1": null,
+   "text_head": null,
+   "itl": null
+  },
+  {
+   "index": 13,
+   "prompt_id": 13,
+   "tag": "r1c01i013",
+   "ok": false,
+   "error": "ClientConnectorError: Cannot connect to host 127.0.0.1:8000 ssl:default [Connect call failed ('127.0.0.1', 8000)]",
+   "t_send": 0.005344334000028539,
+   "ttft": null,
+   "e2e": null,
+   "chunk_offsets": [],
+   "prompt_tokens": null,
+   "completion_tokens": null,
+   "finish_reason": null,
+   "text_sha1": null,
+   "text_head": null,
+   "itl": null
+  },
+  {
+   "index": 14,
+   "prompt_id": 14,
+   "tag": "r1c01i014",
+   "ok": false,
+   "error": "ClientConnectorError: Cannot connect to host 127.0.0.1:8000 ssl:default [Connect call failed ('127.0.0.1', 8000)]",
+   "t_send": 0.005606967000005625,
+   "ttft": null,
+   "e2e": null,
+   "chunk_offsets": [],
+   "prompt_tokens": null,
+   "completion_tokens": null,
+   "finish_reason": null,
+   "text_sha1": null,
+   "text_head": null,
+   "itl": null
+  },
+  {
+   "index": 15,
+   "prompt_id": 15,
+   "tag": "r1c01i015",
+   "ok": false,
+   "error": "ClientConnectorError: Cannot connect to host 127.0.0.1:8000 ssl:default [Connect call failed ('127.0.0.1', 8000)]",
+   "t_send": 0.005822319000003517,
+   "ttft": null,
+   "e2e": null,
+   "chunk_offsets": [],
+   "prompt_tokens": null,
+   "completion_tokens": null,
+   "finish_reason": null,
+   "text_sha1": null,
+   "text_head": null,
+   "itl": null
+  }
+ ]
+}
