@@ -166,8 +166,18 @@ def run_level(name: str, prompt_set: list[dict], c: int, rep: int, n: int,
                                                    max_tokens))
     samples = sampler.stop()
     return {"started_at": started, "summary": client.summarize(results, wall),
-            "gpu": gpu.summarize(samples), "gpu_samples": samples,
+            "gpu": gpu.summarize(samples), "gpu_samples": samples, "host_mem": host_mem(),
             "requests": [r.to_json() for r in results]}
+
+
+def host_mem() -> dict:
+    """WSL RAM and swap after a run: a server that outgrows RAM shows up here, not on the GPU."""
+    info = {}
+    for line in Path("/proc/meminfo").read_text().splitlines():
+        key, val = line.split(":", 1)
+        if key in ("MemTotal", "MemAvailable", "SwapTotal", "SwapFree"):
+            info[key + "_mib"] = int(val.split()[0]) // 1024
+    return info
 
 
 def main() -> None:
@@ -263,14 +273,25 @@ def main() -> None:
                               "block": block, "position": position, "n_requests": n,
                               "power_plan_at_start": plan,
                               "config": config, "env": env, "server_info": info, **run}
-                    path = run_path(name, c, rep)
-                    path.write_text(json.dumps(record, indent=1), encoding="utf-8")
+                    if s["n_errors"]:
+                        # A failed request means the measurement is broken (server died, OOM...):
+                        # keep the evidence outside runs/ and stop rather than record garbage.
+                        (out / "failed").mkdir(exist_ok=True)
+                        bad = out / "failed" / f"{name}_c{c:02d}_r{rep}_{dt.datetime.now():%H%M%S}.json"
+                        bad.write_text(json.dumps(record, indent=1), encoding="utf-8")
+                        raise RuntimeError(f"{name} r{rep} c={c}: {s['n_errors']} failed requests, "
+                                           f"e.g. {s['errors'][:2]}; saved to {bad.name}")
+                    run_path(name, c, rep).write_text(json.dumps(record, indent=1), encoding="utf-8")
+                    mem = run["host_mem"]
                     print(f"  {name} r{rep} c={c:2d}: {s['output_tok_per_s']:7.1f} tok/s  "
                           f"{s['requests_per_s']:.2f} req/s  ttft p50 "
                           f"{s['ttft_s']['p50'] * 1000:6.0f} ms  itl p50 "
-                          f"{s['itl_s']['p50'] * 1000:5.1f} ms  errors {s['n_errors']}  "
-                          f"peak {run['gpu']['mem_used_mib_max']} MiB  "
-                          f"sm {run['gpu']['sm_clock_mhz_mean_busy']} MHz", flush=True)
+                          f"{s['itl_s']['p50'] * 1000:5.1f} ms  "
+                          f"peak {run['gpu']['mem_used_mib_max']:.0f} MiB  "
+                          f"sm {run['gpu']['sm_clock_mhz_mean_busy']:.0f} MHz  "
+                          f"ram avail {mem.get('MemAvailable_mib')} MiB  "
+                          f"swap used {mem.get('SwapTotal_mib', 0) - mem.get('SwapFree_mib', 0)} MiB",
+                          flush=True)
                     time.sleep(3)
             info["details_after"] = server_details(name)
         finally:

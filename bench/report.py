@@ -12,6 +12,8 @@ import statistics
 from collections import defaultdict
 from pathlib import Path
 
+from bench import analysis
+
 SERVER_LABEL = {"vllm": "vLLM", "ollama": "Ollama"}
 # Reference categorical palette, slots 1-2, light surface (validated in the dataviz skill).
 COLORS = {"vllm": "#2a78d6", "ollama": "#eb6834"}
@@ -46,7 +48,8 @@ def aggregate(runs: list[dict]) -> dict:
     for r in runs:
         by[(r["server"], r["concurrency"])].append(r)
     agg = {}
-    for (server, c), rs in sorted(by.items()):
+    # Rows go by concurrency with the two servers side by side, vLLM first.
+    for (server, c), rs in sorted(by.items(), key=lambda kv: (kv[0][1], kv[0][0] != "vllm")):
         entry = {"server": server, "concurrency": c, "repeats": sorted(r["repeat"] for r in rs),
                  "n_requests_per_run": rs[0]["n_requests"]}
         for name, get in METRICS.items():
@@ -238,6 +241,31 @@ def resume_block(agg: dict, prov: dict) -> str:
     return "\n".join(lines)
 
 
+def fidelity_markdown(fid: dict, mech: dict) -> str:
+    d = fid["prompt_token_diff_ollama_minus_vllm"]
+    lo, hi = mech["prompt_tokens_range"]
+    return (f"- {fid['paired_requests']} requests were sent to both servers with identical text.\n"
+            f"- Prompt token count difference (Ollama minus vLLM): min {d['min']}, max {d['max']} "
+            f"(prompts ran from {lo} to {hi} tokens), so both applied the same chat template and tokenizer.\n"
+            f"- Identical full 256-token greedy output: {fid['identical_full_text_frac']:.0%} of requests; "
+            f"identical first 60 characters: {fid['identical_first_60_chars_frac']:.0%}.")
+
+
+def inject_readme(readme: Path, blocks: dict[str, str]) -> None:
+    """Replaces the text between <!-- name:start --> and <!-- name:end --> with generated content,
+    so the README's numbers are always the ones computed from the run files."""
+    if not readme.exists():
+        return
+    text = readme.read_text(encoding="utf-8")
+    for name, body in blocks.items():
+        start, end = f"<!-- {name}:start -->", f"<!-- {name}:end -->"
+        if start in text and end in text:
+            head, rest = text.split(start, 1)
+            _, tail = rest.split(end, 1)
+            text = f"{head}{start}\n{body}\n{end}{tail}"
+    readme.write_text(text, encoding="utf-8", newline="\n")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--results", type=Path, default=Path("results"))
@@ -248,11 +276,20 @@ def main() -> None:
     agg = aggregate(runs)
     prov = provenance(runs)
     fid = fidelity(runs)
-    summary = {"n_run_files": len(runs), "provenance": prov, "fidelity": fid, "aggregate": agg}
+    mech = analysis.analyze(runs)
+    summary = {"n_run_files": len(runs), "provenance": prov, "fidelity": fid,
+               "analysis": mech, "aggregate": agg}
     (args.results / "summary.json").write_text(json.dumps(summary, indent=1), encoding="utf-8")
     (args.results / "results_table.md").write_text(table(agg) + "\n", encoding="utf-8")
+    (args.results / "analysis.md").write_text(analysis.to_markdown(mech) + "\n", encoding="utf-8")
     (args.results / "resume_numbers.txt").write_text(resume_block(agg, prov) + "\n", encoding="utf-8")
     plot(agg, args.results)
+    inject_readme(args.results.parent / "README.md", {
+        "results": table(agg),
+        "analysis": analysis.to_markdown(mech),
+        "fidelity": fidelity_markdown(fid, mech),
+        "resume": "```text\n" + resume_block(agg, prov) + "\n```",
+    })
     print(table(agg))
     print()
     print(resume_block(agg, prov))
