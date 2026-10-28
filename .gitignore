@@ -2,3 +2,6 @@ __pycache__/
 *.pyc
 results/smoke/
 results/raw/*.log
+# Raw server logs are large (Ollama logs every slot event); gzipped copies are committed instead.
+results/logs/*.log
+results/aborted/*/*.log

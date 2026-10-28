@@ -57,6 +57,31 @@ report the median of the 3 repeats, with min-max ranges.
 versions, power plan, the launch script and the prompt-file hash. `bench/study.py` refuses to
 record with uncommitted changes to tracked files, or when Windows is not on the Turbo power plan.
 
+## Limitations
+
+- **One laptop GPU.** An RTX 3060 Laptop (6 GB, about 336 GB/s by spec) in a laptop chassis.
+  The clock drops as the GPU heats up, so every run records its SM clock and temperature. Absolute
+  numbers will not transfer to datacenter GPUs, where vLLM's design targets much larger batches.
+- **WSL2.** The GPU is reached through WSL's paravirtualized driver (`dxg`). vLLM reports that
+  pinned host memory is unavailable under WSL and falls back. `nvidia-smi` cannot attribute memory
+  to processes under WSL, so memory is device-wide and includes the Windows desktop's idle baseline.
+  WSL had 7.6 GB of RAM, and Ollama disabled mmap because of host memory pressure (load time only).
+- **One model size, one precision, short contexts.** A 1.5B model in FP16, prompts of about
+  250-1,250 tokens, 256 output tokens, concurrency up to 16. Larger models, quantized weights,
+  long contexts or higher concurrency can change the picture. In particular, paged attention's
+  memory advantage only bites once fixed per-slot reservations stop fitting.
+- **Tuned limits, otherwise defaults.** Both servers are capped at 16 sequences and 2,048 tokens
+  per request; Ollama's parallelism was raised from its default to 16. Everything else (vLLM's
+  CUDA graphs, torch.compile and chunked prefill; Ollama's flash attention and verbose llama-server
+  logging) is each server's default.
+- **Not byte-identical weights.** See "Same model, same precision" above. Greedy outputs match
+  exactly for most requests and drift apart later in the rest, which is expected when two FP16
+  implementations round differently.
+- **Closed-loop load only.** The client keeps exactly *c* requests in flight. It measures
+  capacity at a fixed concurrency, not latency under a Poisson arrival rate.
+- **Client on the same machine.** The async client runs in the same WSL instance, so its CPU use
+  is shared with the server's; it is the same client for both servers.
+
 ## Reproduce
 
 Inside WSL2 (Ubuntu 24.04):
